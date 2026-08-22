@@ -522,12 +522,493 @@ export const CSSJ_IMPORTANT_DATES_2026 = [
 ];
 
 // ==========================================
-// 3. JORNALIZACIÓN ANUAL 2026 (EJEMPLO OFICIAL)
+// 2.1 CATÁLOGO DE ASIGNATURAS ACADÉMICAS OFICIALES CSSJ POR GRADO
+// ==========================================
+export interface AcademicSubjectTemplate {
+  id: string;
+  name: string;
+  level: 'Parvularia' | 'Básica I Ciclo' | 'Básica II Ciclo' | 'Básica III Ciclo' | 'Bachillerato General' | 'Bachillerato Técnico';
+  grade: string;
+  weeklyHours: number;
+  annualHours: number;
+  description: string;
+  competenciaGeneral: string;
+  defaultObjective: string;
+  saberConocer: string[];
+  saberHacer: string[];
+  saberSer: string[];
+  indicadoresLogro: string[];
+  bibliografia: string[];
+}
+
+export const CSSJ_ACADEMIC_SUBJECTS_CATALOG: AcademicSubjectTemplate[] = [
+  // --- EDUCACIÓN BÁSICA ---
+  {
+    id: 'subj-lenguaje-7',
+    name: 'Lenguaje y Literatura',
+    level: 'Básica III Ciclo',
+    grade: '7° Grado (Secciones A, B y C)',
+    weeklyHours: 5,
+    annualHours: 200,
+    description: 'Desarrollo de la comprensión lectora, producción de textos narrativos, poéticos y argumentativos, y dominio de la gramática normativa.',
+    competenciaGeneral: 'Comunicarse eficazmente de forma oral y escrita mediante el análisis crítico y la producción de textos con intención estética y funcional.',
+    defaultObjective: 'Analizar la estructura del cuento fantástico y aplicar figuras literarias en la producción de textos creativos propios.',
+    saberConocer: [
+      'Estructura del cuento fantástico y la novela de aventuras.',
+      'Figuras literarias: metáfora, símil, hipérbole y personificación.',
+      'Sintaxis oracional: sujeto, predicado y complementos verbales.',
+    ],
+    saberHacer: [
+      'Redacción de relatos cortos aplicando coherencia, cohesión y signos de puntuación.',
+      'Análisis sintáctico y morfológico de oraciones compuestas.',
+      'Lectura dramatizada y declamación de poesía lírica cuscatleca.',
+    ],
+    saberSer: [
+      'Apreciación del patrimonio literario y cultural salvadoreño.',
+      'Hábito y disfrute de la lectura cotidiana.',
+      'Respeto por la diversidad de opiniones en debates grupales.',
+    ],
+    indicadoresLogro: [
+      'Identifica con claridad los elementos estructurales y personajes en cuentos fantásticos.',
+      'Aplica correctamente las normas ortográficas y de puntuación en sus escritos.',
+      'Expresa sus ideas con fluidez, respeto y elocuencia en exposiciones orales.',
+    ],
+    bibliografia: [
+      'MINEDUCYT. (2024). Programa de Estudio: Lenguaje y Literatura 7° Grado. San Salvador: MINED.',
+      'Real Academia Española. (2020). Ortografía de la lengua española. Espasa.',
+    ],
+  },
+  {
+    id: 'subj-mate-7',
+    name: 'Matemática (ESMATE)',
+    level: 'Básica III Ciclo',
+    grade: '7° Grado (Secciones A, B y C)',
+    weeklyHours: 5,
+    annualHours: 200,
+    description: 'Números positivos y negativos, expresiones algebraicas, ecuaciones de primer grado y proporcionalidad bajo metodología ESMATE.',
+    competenciaGeneral: 'Resolver situaciones problemáticas del entorno mediante el razonamiento lógico, el lenguaje algebraico y el pensamiento crítico.',
+    defaultObjective: 'Resolver ecuaciones de primer grado con una incógnita y aplicarlas en la solución de problemas cotidianos de cálculo y presupuesto.',
+    saberConocer: [
+      'Números enteros, recta numérica y valor absoluto.',
+      'Propiedades de las operaciones combinadas y jerarquía de operaciones.',
+      'Ecuaciones lineales de la forma ax + b = c y proporcionalidad directa e inversa.',
+    ],
+    saberHacer: [
+      'Planteamiento y resolución de ecuaciones lineales paso a paso.',
+      'Construcción y lectura de gráficas de proporcionalidad en el plano cartesiano.',
+      'Cálculo de porcentajes, interés simple y descuentos comerciales.',
+    ],
+    saberSer: [
+      'Perseverancia y rigor lógico en la búsqueda de soluciones a problemas complejos.',
+      'Honestidad y transparencia en el desarrollo de ejercicios evaluados.',
+      'Colaboración fraterna en el trabajo cooperativo en equipo salesiano.',
+    ],
+    indicadoresLogro: [
+      'Resuelve con precisión operaciones con números enteros y racionales.',
+      'Despeja incógnitas en ecuaciones lineales justificando cada propiedad algebraica utilizada.',
+      'Modela situaciones de la vida real mediante expresiones algebraicas sencillas.',
+    ],
+    bibliografia: [
+      'MINEDUCYT. (2024). Libro de Texto ESMATE 7° Grado. San Salvador: MINED.',
+      'Stewart, J. (2020). Precálculo: Matemáticas para el cálculo. Cengage Learning.',
+    ],
+  },
+  {
+    id: 'subj-ciencias-8',
+    name: 'Ciencias Naturales',
+    level: 'Básica III Ciclo',
+    grade: '8° Grado (Secciones A, B y C)',
+    weeklyHours: 5,
+    annualHours: 200,
+    description: 'Física elemental, química inorgánica básica, sistemas biológicos y conservación de ecosistemas con prácticas de laboratorio.',
+    competenciaGeneral: 'Explicar fenómenos del mundo natural a partir del método científico, promoviendo el cuidado de la casa común y la salud integral.',
+    defaultObjective: 'Comprender las leyes del movimiento de Newton y la transformación de la energía a través de experimentos guiados en laboratorio.',
+    saberConocer: [
+      'Cinemática: velocidad, aceleración y leyes del movimiento de Newton.',
+      'Estructura atómica, tabla periódica y enlaces químicos.',
+      'Ecología, biodiversidad de El Salvador y sostenibilidad ambiental.',
+    ],
+    saberHacer: [
+      'Manejo seguro de instrumental en el laboratorio de ciencias.',
+      'Registro y análisis de datos experimentales en tablas y gráficas.',
+      'Elaboración de informes de laboratorio con hipótesis y conclusiones.',
+    ],
+    saberSer: [
+      'Conciencia ecológica y compromiso con el reciclaje y ahorro energético.',
+      'Cuidado estricto de las normas de bioseguridad en el laboratorio.',
+      'Curiosidad científica y asombro ante la naturaleza.',
+    ],
+    indicadoresLogro: [
+      'Aplica las leyes de Newton para calcular fuerza, masa y aceleración en problemas prácticos.',
+      'Diferencia elementos, compuestos y mezclas a partir de sus propiedades físico-químicas.',
+      'Elabora proyectos científicos escolares con rigor metodológico.',
+    ],
+    bibliografia: [
+      'MINEDUCYT. (2024). Guías de Ciencia y Tecnología 8° Grado. San Salvador: MINED.',
+      'Hewitt, P. (2018). Física Conceptual. Pearson Educación.',
+    ],
+  },
+  {
+    id: 'subj-sociales-9',
+    name: 'Estudios Sociales y Cívica',
+    level: 'Básica III Ciclo',
+    grade: '9° Grado (Secciones A, B y C)',
+    weeklyHours: 4,
+    annualHours: 160,
+    description: 'Historia contemporánea de El Salvador y Centroamérica, geografía física y humana, democracia, derechos humanos y educación cívica.',
+    competenciaGeneral: 'Analizar críticamente la realidad histórica y social salvadoreña para actuar como ciudadanos comprometidos con la justicia y la paz.',
+    defaultObjective: 'Investigar las causas y consecuencias de los Acuerdos de Paz de 1992 y su impacto en la institucionalidad democrática salvadoreña.',
+    saberConocer: [
+      'Geografía física y geopolítica de Centroamérica y el Caribe.',
+      'Historia salvadoreña del siglo XX: crisis sociopolítica y Acuerdos de Paz.',
+      'Estructura del Estado, Constitución de la República y Derechos Humanos.',
+    ],
+    saberHacer: [
+      'Análisis de fuentes históricas primarias y secundarias con espíritu crítico.',
+      'Elaboración de mapas temáticos, líneas de tiempo y ensayos reflexivos.',
+      'Debates estructurados sobre problemáticas sociales juveniles actuales.',
+    ],
+    saberSer: [
+      'Compromiso con la cultura de paz, diálogo y no violencia activa.',
+      'Identidad nacional y valoración del patrimonio histórico cuscatleco.',
+      'Solidaridad con los sectores más vulnerables de la comunidad.',
+    ],
+    indicadoresLogro: [
+      'Explica con argumentos sólidos los procesos históricos que configuraron el El Salvador contemporáneo.',
+      'Reconoce sus derechos y deberes ciudadanos contemplados en la Constitución.',
+      'Propone acciones comunitarias para el fomento de la convivencia armónica.',
+    ],
+    bibliografia: [
+      'MINEDUCYT. (2024). Estudios Sociales y Cívica 9° Grado. San Salvador: MINED.',
+      'Ministerio de Educación. (2022). Historia de El Salvador Tomos I y II.',
+    ],
+  },
+  {
+    id: 'subj-ingles-8',
+    name: 'Inglés General',
+    level: 'Básica III Ciclo',
+    grade: '8° Grado (Secciones A, B y C)',
+    weeklyHours: 3,
+    annualHours: 120,
+    description: 'Desarrollo de las 4 macrohabilidades lingüísticas (Listening, Speaking, Reading, Writing) alineadas al marco MCER A2.',
+    competenciaGeneral: 'Interactuar en situaciones comunicativas cotidianas en idioma inglés con fluidez y precisión gramatical en nivel básico-intermedio.',
+    defaultObjective: 'Narrar eventos pasados y planes a futuro utilizando Past Simple y Going to en conversaciones y redacción de correos informales.',
+    saberConocer: [
+      'Grammar structures: Past Simple (regular/irregular verbs), Present Continuous for future, Comparatives/Superlatives.',
+      'Daily vocabulary: travel, technology, hobbies, feelings, and school routines.',
+      'Phonetics: correct pronunciation of regular verb endings (-ed) and connected speech.',
+    ],
+    saberHacer: [
+      'Short interactive dialogues and role-plays about everyday life situations.',
+      'Reading comprehension of short articles, emails, and narratives.',
+      'Writing structured paragraphs with topic sentence and supporting ideas.',
+    ],
+    saberSer: [
+      'Confidence and willingness to speak in English without fear of making mistakes.',
+      'Respect for cultural differences and global diversity.',
+      'Active listening and collaborative teamwork in paired speaking tasks.',
+    ],
+    indicadoresLogro: [
+      'Understands main ideas from audio tracks spoken at moderate speed.',
+      'Speaks with intelligible pronunciation in 2-minute presentations.',
+      'Writes coherent 80-word paragraphs using appropriate linking words.',
+    ],
+    bibliografia: [
+      'Cambridge University Press. (2023). Prepare! Level 2 Student Book.',
+      'MINEDUCYT. (2024). English Curriculum Guidelines for Basic Education.',
+    ],
+  },
+  {
+    id: 'subj-religion-all',
+    name: 'Educación en la Fe / Formación Pastoral Salesiana',
+    level: 'Básica III Ciclo',
+    grade: '7°, 8° y 9° Grado / Educación Media',
+    weeklyHours: 2,
+    annualHours: 80,
+    description: 'Vivencia del Evangelio, pedagogía del Sistema Preventivo de Don Bosco (Razón, Religión y Amor), carisma salesiano y compromiso solidario.',
+    competenciaGeneral: 'Interiorizar los valores cristiano-salesianos para construir un proyecto de vida centrado en el servicio generoso al prójimo.',
+    defaultObjective: 'Conocer y poner en práctica el Aguinaldo Salesiano 2026 y el carisma de Don Bosco en las relaciones cotidianas de aula y familia.',
+    saberConocer: [
+      'La persona de Jesucristo en los Evangelios y la Doctrina Social de la Iglesia.',
+      'Vida de San Juan Bosco, Santa María Mazzarello y Santo Domingo Savio.',
+      'Pilares del Sistema Preventivo: Razón, Religión y Amor (Amorevolezza).',
+    ],
+    saberHacer: [
+      'Organización de momentos de oración de los Buenos Días y campañas solidarias.',
+      'Reflexión guiada sobre dilemas éticos y proyecto de vida personal.',
+      'Participación activa en el Movimiento Juvenil Salesiano (MJS).',
+    ],
+    saberSer: [
+      'Alegría salesiana, espíritu de familia y amabilidad en el trato mutuo.',
+      'Sensibilidad social y compromiso concreto con los más necesitados.',
+      'Fidelidad y amor a María Auxiliadora y a la Iglesia.',
+    ],
+    indicadoresLogro: [
+      'Explica el mensaje central del Evangelio y lo vincula con su vida diaria.',
+      'Demuestra en su comportamiento los valores de la convivencia salesiana.',
+      'Participa con devoción y respeto en las celebraciones litúrgicas colegiales.',
+    ],
+    bibliografia: [
+      'Congregación Salesiana. (2026). Aguinaldo del Rector Mayor: El sueño que hace soñar.',
+      'Braido, P. (2018). Prevenir, no reprimir: El sistema educativo de Don Bosco.',
+    ],
+  },
+  {
+    id: 'subj-edufisica-all',
+    name: 'Educación Física y Deportes',
+    level: 'Básica III Ciclo',
+    grade: 'Educación Básica y Media (Todas las secciones)',
+    weeklyHours: 2,
+    annualHours: 80,
+    description: 'Acondicionamiento físico, fundamentos técnicos de fútbol, baloncesto, voleibol, atletismo y promoción de hábitos de vida saludable.',
+    competenciaGeneral: 'Desarrollar capacidades motrices, condicionales y coordinativas mediante la práctica deportiva y el juego limpio salesiano.',
+    defaultObjective: 'Ejecutar circuitos de resistencia aeróbica y fundamentos de pases y lanzamientos en deportes de conjunto respetando las reglas.',
+    saberConocer: [
+      'Fisiología básica del ejercicio: frecuencia cardíaca, hidratación y nutrición deportiva.',
+      'Reglamento oficial de Baloncesto, Voleibol, Fútbol Sala y Atletismo.',
+      'Prevención de lesiones deportivas y primeros auxilios básicos.',
+    ],
+    saberHacer: [
+      'Ejecución correcta de ejercicios de calentamiento, estiramiento y vuelta a la calma.',
+      'Dominio técnico del balón (drible, pase, recepción, tiro al marco/canasta).',
+      'Aplicación de tácticas y sistemas defensivos/ofensivos en partidos de clase.',
+    ],
+    saberSer: [
+      'Juego limpio (Fair Play), compañerismo y respeto irrestricto al árbitro.',
+      'Superación personal y esfuerzo constante ante la exigencia física.',
+      'Cuidado y conservación del material deportivo y las canchas colegiales.',
+    ],
+    indicadoresLogro: [
+      'Mejora sus marcas individuales en pruebas de resistencia y velocidad.',
+      'Aplica las reglas oficiales en partidos recreativos y competitivos escolares.',
+      'Adopta hábitos de higiene y alimentación saludable post-entrenamiento.',
+    ],
+    bibliografia: [
+      'MINEDUCYT. (2024). Programa de Educación Física Escolar.',
+      'López Chicharro, J. (2020). Fisiología del Ejercicio Físico. Panamericana.',
+    ],
+  },
+  {
+    id: 'subj-informatica-all',
+    name: 'Informática y Ciudadanía Digital (TBox)',
+    level: 'Básica III Ciclo',
+    grade: '7°, 8° y 9° Grado',
+    weeklyHours: 2,
+    annualHours: 80,
+    description: 'Herramientas ofimáticas en la nube, programación por bloques, robótica educativa, seguridad digital y plataforma TBox Planet.',
+    competenciaGeneral: 'Utilizar tecnologías digitales de información y comunicación de forma ética, productiva y segura para la solución de problemas.',
+    defaultObjective: 'Diseñar algoritmos con estructuras condicionales y bucles en plataformas de programación visual y modelar hojas de cálculo avanzadas.',
+    saberConocer: [
+      'Lógica algorítmica: variables, condicionales, ciclos y funciones.',
+      'Hojas de cálculo: fórmulas lógicas, estadísticas y gráficos dinámicos.',
+      'Ciberseguridad: protección de datos personales y huella digital ética.',
+    ],
+    saberHacer: [
+      'Programación de animaciones e historias interactivas en Scratch / Python básico.',
+      'Diseño de bases de datos y tablas de cálculo para administración de datos.',
+      'Producción de presentaciones interactivas con Canva y herramientas cloud.',
+    ],
+    saberSer: [
+      'Responsabilidad ética en el uso de redes sociales e inteligencia artificial.',
+      'Cuidado y uso responsable del laboratorio de cómputo del colegio.',
+      'Pensamiento computacional crítico y resolución colaborativa de retos.',
+    ],
+    indicadoresLogro: [
+      'Construye programas funcionales que resuelven retos matemáticos y lógicos.',
+      'Utiliza fórmulas de hoja de cálculo con precisión para el análisis de datos.',
+      'Aplica medidas de seguridad y privacidad en entornos virtuales.',
+    ],
+    bibliografia: [
+      'TBox El Salvador. (2026). Currículo de Tecnología Educativa TBox Planet.',
+      'Resnick, M. (2019). Cultivando la creatividad a través de proyectos de programación.',
+    ],
+  },
+
+  // --- EDUCACIÓN MEDIA: BACHILLERATO GENERAL Y TÉCNICO (TRONCO COMÚN) ---
+  {
+    id: 'subj-mate-media-1',
+    name: 'Matemática (Bachillerato)',
+    level: 'Bachillerato General',
+    grade: '1° y 2° Año de Bachillerato (General y Técnico)',
+    weeklyHours: 5,
+    annualHours: 200,
+    description: 'Trigonometría, geometría analítica, funciones polinomiales, cónicas, cálculo diferencial básico y estadística descriptiva.',
+    competenciaGeneral: 'Modelar y resolver problemas complejos de ciencias e ingeniería mediante funciones matemáticas, trigonometría y cálculo.',
+    defaultObjective: 'Graficar y analizar funciones trigonométricas y aplicar las identidades fundamentales en la resolución de triángulos oblicuángulos.',
+    saberConocer: [
+      'Funciones trigonométricas (seno, coseno, tangente) y círculo unitario.',
+      'Leyes de senos y cosenos para triángulos oblicuángulos.',
+      'Geometría analítica de la recta, parábola, elipse y circunferencia.',
+    ],
+    saberHacer: [
+      'Demostración rigurosa de identidades trigonométricas fundamentales.',
+      'Cálculo de distancias, pendientes y ecuaciones de lugares geométricos.',
+      'Uso de software matemático (GeoGebra) para la visualización gráfica.',
+    ],
+    saberSer: [
+      'Rigor analítico y perseverancia en la resolución de problemas de cálculo.',
+      'Disposición al trabajo colaborativo y respeto al razonamiento ajeno.',
+      'Aplicación ética de las matemáticas en el análisis de datos sociales.',
+    ],
+    indicadoresLogro: [
+      'Resuelve problemas de topografía y navegación aplicando leyes de senos y cosenos.',
+      'Determina la ecuación canónica y general de las secciones cónicas.',
+      'Interpreta modelos matemáticos en contextos físicos y económicos.',
+    ],
+    bibliografia: [
+      'MINEDUCYT. (2024). Libro de Texto ESMATE 1° y 2° Año de Bachillerato. San Salvador: MINED.',
+      'Larson, R. (2021). Precálculo con límites. Cengage Learning.',
+    ],
+  },
+  {
+    id: 'subj-ciencias-media-1',
+    name: 'Ciencias Naturales (Física y Química)',
+    level: 'Bachillerato General',
+    grade: '1° y 2° Año de Bachillerato (General y Técnico)',
+    weeklyHours: 5,
+    annualHours: 200,
+    description: 'Mecánica clásica, termodinámica, electromagnetismo, estequiometría química y química orgánica con rigor experimental.',
+    competenciaGeneral: 'Investigar y modelar fenómenos físicos y químicos mediante la experimentación de laboratorio y el análisis cuantitativo riguroso.',
+    defaultObjective: 'Aplicar el principio de conservación de la energía y resolver problemas de estequiometría química en reacciones de óxido-reducción.',
+    saberConocer: [
+      'Termodinámica: calor, temperatura, leyes de la termodinámica y entropía.',
+      'Electromagnetismo: ley de Coulomb, campo eléctrico y circuitos de corriente continua.',
+      'Estequiometría: reactivo limitante, rendimiento porcentual y gases ideales.',
+    ],
+    saberHacer: [
+      'Montaje de circuitos eléctricos en protoboard y medición con multímetro digital.',
+      'Balanceo de ecuaciones químicas por el método redox e ion-electrón.',
+      'Redacción de artículos científicos escolares en formato IMRyD.',
+    ],
+    saberSer: [
+      'Ética científica, honestidad en el reporte de datos y bioseguridad.',
+      'Compromiso con el desarrollo de energías limpias y renovables.',
+      'Trabajo en equipo y liderazgo en proyectos de investigación aplicada.',
+    ],
+    indicadoresLogro: [
+      'Calcula voltajes, corrientes y resistencias equivalentes en circuitos mixtos.',
+      'Determina masas de productos y reactivos en cálculos estequiométricos de laboratorio.',
+      'Sustenta proyectos científicos con solvencia teórica y experimental.',
+    ],
+    bibliografia: [
+      'Serway, R. & Jewett, J. (2021). Física para ciencias e ingeniería (10ª ed.). Cengage.',
+      'Chang, R. (2020). Química General (13ª ed.). McGraw-Hill Education.',
+    ],
+  },
+  {
+    id: 'subj-lenguaje-media-1',
+    name: 'Lenguaje y Literatura (Bachillerato)',
+    level: 'Bachillerato General',
+    grade: '1° y 2° Año de Bachillerato (General y Técnico)',
+    weeklyHours: 5,
+    annualHours: 200,
+    description: 'Literatura universal y latinoamericana, ensayo académico, comunicación corporativa, retórica y análisis del discurso crítico.',
+    competenciaGeneral: 'Producir ensayos académicos y discursos persuasivos con rigor conceptual, corrección idiomática y pensamiento crítico.',
+    defaultObjective: 'Elaborar un ensayo argumentativo con estructura académica formal sobre una obra emblemática del Boom Latinoamericano.',
+    saberConocer: [
+      'Literatura clásica grecolatina, del Siglo de Oro y el Realismo Mágico.',
+      'Estructura del ensayo académico: tesis, argumentos, contraargumentos y citas APA 7.',
+      'Análisis crítico del discurso en medios de comunicación y redes sociales.',
+    ],
+    saberHacer: [
+      'Redacción de ensayos científicos y humanísticos con normas APA 7.',
+      'Debate parlamentario y oratoria con técnicas de persuasión y elocuencia.',
+      'Comentario crítico de textos literarios y filosóficos universales.',
+    ],
+    saberSer: [
+      'Pensamiento crítico y defensa de la libertad de expresión responsable.',
+      'Sensibilidad estética y aprecio por las bellas artes universales.',
+      'Rigor intelectual y respeto por la propiedad intelectual evitando el plagio.',
+    ],
+    indicadoresLogro: [
+      'Escribe ensayos coherentes con tesis delimitada y respaldo bibliográfico fidedigno.',
+      'Defiende posturas en debates utilizando argumentos fundamentados sin falacias.',
+      'Analiza las corrientes literarias y su relación con el contexto socio-histórico.',
+    ],
+    bibliografia: [
+      'MINEDUCYT. (2024). Lenguaje y Literatura: Bachillerato. San Salvador: MINED.',
+      'Weston, A. (2020). Las claves de la argumentación. Editorial Ariel.',
+    ],
+  },
+  {
+    id: 'subj-sociales-media-1',
+    name: 'Estudios Sociales y Cívica (Bachillerato)',
+    level: 'Bachillerato General',
+    grade: '1° y 2° Año de Bachillerato (General y Técnico)',
+    weeklyHours: 4,
+    annualHours: 160,
+    description: 'Sociología, economía política, globalización, retos del desarrollo humano en El Salvador y legislación laboral y cívica.',
+    competenciaGeneral: 'Analizar las dinámicas socioeconómicas y políticas del país para formular propuestas ciudadanas viables y solidarias.',
+    defaultObjective: 'Formular un diagnóstico socioeconómico comunitario y proponer estrategias de desarrollo local sostenible para El Salvador.',
+    saberConocer: [
+      'Sociología de la realidad salvadoreña: empleo, migración y tejido social.',
+      'Macroeconomía: inflación, balanza de pagos, remesas y tratados comerciales.',
+      'Derecho laboral salvadoreño: Código de Trabajo, prestaciones y contratos.',
+    ],
+    saberHacer: [
+      'Diseño y aplicación de encuestas de investigación social en la comunidad.',
+      'Interpretación de indicadores de desarrollo humano (PNUD, CEPAL, BCR).',
+      'Elaboración de proyectos de desarrollo social con matriz de marco lógico.',
+    ],
+    saberSer: [
+      'Compromiso cívico con la justicia distributiva y la equidad social.',
+      'Solidaridad activa con los sectores vulnerables y marginados.',
+      'Respeto al estado de derecho y transparencia institucional.',
+    ],
+    indicadoresLogro: [
+      'Explica la influencia de la globalización en la economía y cultura nacional.',
+      'Conoce y defiende sus derechos laborales y ciudadanos fundamentales.',
+      'Propone soluciones fundamentadas a problemáticas sociales locales.',
+    ],
+    bibliografia: [
+      'MINEDUCYT. (2024). Estudios Sociales y Cívica Bachillerato. San Salvador: MINED.',
+      'PNUD. (2023). Informe sobre Desarrollo Humano El Salvador.',
+    ],
+  },
+  {
+    id: 'subj-seminario-media-2',
+    name: 'Seminario de Investigación / Proyecto de Graduación',
+    level: 'Bachillerato General',
+    grade: '2° Año General / 3° Año Técnico',
+    weeklyHours: 3,
+    annualHours: 120,
+    description: 'Metodología de la investigación científica, formulación de tesis, marco teórico, diseño muestral y defensa oral de tesis.',
+    competenciaGeneral: 'Desarrollar una investigación científica o proyecto técnico innovador aplicando las etapas del método científico y normas APA.',
+    defaultObjective: 'Ejecutar el trabajo de campo de la investigación y defender los resultados y propuestas ante terna evaluadora colegial.',
+    saberConocer: [
+      'Metodología de la investigación cuantitativa, cualitativa y mixta.',
+      'Diseño muestral, técnicas de recolección de datos y bioética en la investigación.',
+      'Estructura de tesis de graduación bajo normas internacionales APA 7ma edición.',
+    ],
+    saberHacer: [
+      'Redacción del planteamiento del problema, justificación y marco teórico.',
+      'Procesamiento estadístico de datos con software analítico (Excel / SPSS).',
+      'Defensa pública de tesis con presentación ejecutiva y prototipo funcional.',
+    ],
+    saberSer: [
+      'Ética investigativa impecable, honestidad en los datos y rigor metodológico.',
+      'Capacidad de trabajo autónomo, disciplina y resiliencia ante las correcciones.',
+      'Orientación al impacto social y beneficio directo a la comunidad salesiana.',
+    ],
+    indicadoresLogro: [
+      'Plantea problemas de investigación pertinentes con objetivos claros y medibles.',
+      'Aplica instrumentos de recolección de datos con validez y confiabilidad demostrada.',
+      'Sustenta su proyecto con excelente dominio técnico, oratoria y seguridad profesional.',
+    ],
+    bibliografia: [
+      'Hernández Sampieri, R. & Mendoza, C. (2020). Metodología de la investigación: Las rutas cuantitativa, cualitativa y mixta. McGraw-Hill.',
+      'Colegio Salesiano San José. (2026). Guía Oficial de Seminario y Tesis de Graduación.',
+    ],
+  },
+];
+
+// ==========================================
+// 3. JORNALIZACIÓN ANUAL 2026 (EJEMPLOS OFICIALES)
 // ==========================================
 export const DEFAULT_CSSJ_JORNALIZACIONES: CSSJJornalizacion[] = [
   {
     id: 'jorn-btvdg-101',
-    docente: 'Lic. Alexander Gómez / Especialidad de Diseño',
+    docente: 'Lic. Alexander Gómez / Especialidad Técnica',
     gradoSeccion: '1° Bachillerato Técnico Vocacional "A"',
     asignatura: 'BTVDG1.7 Diseño y Producción Editorial',
     anioLectivo: 2026,
@@ -559,20 +1040,44 @@ export const DEFAULT_CSSJ_JORNALIZACIONES: CSSJJornalizacion[] = [
     totalSemanas: 40,
     totalDias: 200,
     horasSemanales: 5,
-    horasAnuales: 160,
+    horasAnuales: 200,
     trimestre1: { inicio: '2026-01-20', fin: '2026-04-11' },
     trimestre2: { inicio: '2026-04-22', fin: '2026-07-18' },
     trimestre3: { inicio: '2026-07-21', fin: '2026-10-17' },
     unidades: [
-      { unitNumber: 1, title: 'La Crónica Periodística y el Texto Informativo', totalObjectives: 2, classHours: 16, fechaInicio: '2026-01-20', fechaFin: '2026-02-13' },
-      { unitNumber: 2, title: 'El Esquema de Llaves y Organizadores Gráficos', totalObjectives: 2, classHours: 16, fechaInicio: '2026-02-16', fechaFin: '2026-03-06' },
-      { unitNumber: 3, title: 'Lengua Náhuat y Emociones Ancestrales', totalObjectives: 2, classHours: 16, fechaInicio: '2026-03-09', fechaFin: '2026-04-11' },
-      { unitNumber: 4, title: 'El Cuento Fantástico y la Narrativa Salvadoreña', totalObjectives: 2, classHours: 16, fechaInicio: '2026-04-22', fechaFin: '2026-05-22' },
-      { unitNumber: 5, title: 'La Poesía Lírica y Figuras Retóricas', totalObjectives: 2, classHours: 16, fechaInicio: '2026-05-25', fechaFin: '2026-06-19' },
-      { unitNumber: 6, title: 'El Teatro y la Expresión Escénica', totalObjectives: 2, classHours: 16, fechaInicio: '2026-06-22', fechaFin: '2026-07-18' },
-      { unitNumber: 7, title: 'Mitos y Leyendas de Cuscatlán', totalObjectives: 2, classHours: 16, fechaInicio: '2026-07-21', fechaFin: '2026-08-21' },
-      { unitNumber: 8, title: 'El Ensayo Infantil y la Argumentación', totalObjectives: 2, classHours: 16, fechaInicio: '2026-08-24', fechaFin: '2026-09-18' },
-      { unitNumber: 9, title: 'Medios de Comunicación y Ética Digital', totalObjectives: 2, classHours: 16, fechaInicio: '2026-09-21', fechaFin: '2026-10-17' },
+      { unitNumber: 1, title: 'La Crónica Periodística y el Texto Informativo', totalObjectives: 2, classHours: 20, fechaInicio: '2026-01-20', fechaFin: '2026-02-13' },
+      { unitNumber: 2, title: 'El Esquema de Llaves y Organizadores Gráficos', totalObjectives: 2, classHours: 20, fechaInicio: '2026-02-16', fechaFin: '2026-03-06' },
+      { unitNumber: 3, title: 'Lengua Náhuat y Emociones Ancestrales', totalObjectives: 2, classHours: 20, fechaInicio: '2026-03-09', fechaFin: '2026-04-11' },
+      { unitNumber: 4, title: 'El Cuento Fantástico y la Narrativa Salvadoreña', totalObjectives: 2, classHours: 24, fechaInicio: '2026-04-22', fechaFin: '2026-05-22' },
+      { unitNumber: 5, title: 'La Poesía Lírica y Figuras Retóricas', totalObjectives: 2, classHours: 20, fechaInicio: '2026-05-25', fechaFin: '2026-06-19' },
+      { unitNumber: 6, title: 'El Teatro y la Expresión Escénica', totalObjectives: 2, classHours: 20, fechaInicio: '2026-06-22', fechaFin: '2026-07-18' },
+      { unitNumber: 7, title: 'Mitos y Leyendas de Cuscatlán', totalObjectives: 2, classHours: 24, fechaInicio: '2026-07-21', fechaFin: '2026-08-21' },
+      { unitNumber: 8, title: 'El Ensayo Infantil y la Argumentación', totalObjectives: 2, classHours: 24, fechaInicio: '2026-08-24', fechaFin: '2026-09-18' },
+      { unitNumber: 9, title: 'Medios de Comunicación y Ética Digital', totalObjectives: 2, classHours: 28, fechaInicio: '2026-09-21', fechaFin: '2026-10-17' },
+    ],
+  },
+  {
+    id: 'jorn-mate-701',
+    docente: 'Prof. Carlos Hernández',
+    gradoSeccion: 'Tercer Ciclo – 7° Grado “A”, “B” y “C”',
+    asignatura: 'Matemática (ESMATE)',
+    anioLectivo: 2026,
+    totalSemanas: 40,
+    totalDias: 200,
+    horasSemanales: 5,
+    horasAnuales: 200,
+    trimestre1: { inicio: '2026-01-20', fin: '2026-04-11' },
+    trimestre2: { inicio: '2026-04-22', fin: '2026-07-18' },
+    trimestre3: { inicio: '2026-07-21', fin: '2026-10-17' },
+    unidades: [
+      { unitNumber: 1, title: 'Números Positivos, Negativos y el Cero', totalObjectives: 4, classHours: 25, fechaInicio: '2026-01-20', fechaFin: '2026-02-13' },
+      { unitNumber: 2, title: 'Patrones y Expresiones Algebraicas', totalObjectives: 4, classHours: 25, fechaInicio: '2026-02-16', fechaFin: '2026-03-06' },
+      { unitNumber: 3, title: 'Ecuaciones de Primer Grado con una Incógnita', totalObjectives: 5, classHours: 30, fechaInicio: '2026-03-09', fechaFin: '2026-04-11' },
+      { unitNumber: 4, title: 'Proporcionalidad Directa e Inversa', totalObjectives: 4, classHours: 25, fechaInicio: '2026-04-22', fechaFin: '2026-05-22' },
+      { unitNumber: 5, title: 'Figuras Planas y Transformaciones Geométricas', totalObjectives: 3, classHours: 20, fechaInicio: '2026-05-25', fechaFin: '2026-06-19' },
+      { unitNumber: 6, title: 'Áreas y Volúmenes de Cuerpos Geométricos', totalObjectives: 4, classHours: 25, fechaInicio: '2026-06-22', fechaFin: '2026-07-18' },
+      { unitNumber: 7, title: 'Estadística y Tablas de Frecuencia', totalObjectives: 4, classHours: 25, fechaInicio: '2026-07-21', fechaFin: '2026-08-21' },
+      { unitNumber: 8, title: 'Probabilidad y Toma de Decisiones', totalObjectives: 3, classHours: 25, fechaInicio: '2026-08-24', fechaFin: '2026-10-17' },
     ],
   },
 ];
@@ -853,6 +1358,11 @@ export class CurriculumDocsService {
     this.saveToStorage();
   }
 
+  public deleteCalendarPeriod(id: string) {
+    this.calendarPeriods = this.calendarPeriods.filter((p) => p.id !== id);
+    this.saveToStorage();
+  }
+
   // --- JORNALIZACIÓN ---
   public getJornalizaciones(): CSSJJornalizacion[] {
     return [...this.jornalizaciones];
@@ -865,6 +1375,11 @@ export class CurriculumDocsService {
     } else {
       this.jornalizaciones.push(jorn);
     }
+    this.saveToStorage();
+  }
+
+  public deleteJornalizacion(id: string) {
+    this.jornalizaciones = this.jornalizaciones.filter((j) => j.id !== id);
     this.saveToStorage();
   }
 
@@ -883,6 +1398,11 @@ export class CurriculumDocsService {
     this.saveToStorage();
   }
 
+  public deletePlanDidactico(id: string) {
+    this.planesDidacticos = this.planesDidacticos.filter((p) => p.id !== id);
+    this.saveToStorage();
+  }
+
   // --- GUIONES DE CLASE ---
   public getGuionesClase(): CSSJGuionClase[] {
     return [...this.guionesClase];
@@ -895,6 +1415,11 @@ export class CurriculumDocsService {
     } else {
       this.guionesClase.push(guion);
     }
+    this.saveToStorage();
+  }
+
+  public deleteGuionClase(id: string) {
+    this.guionesClase = this.guionesClase.filter((g) => g.id !== id);
     this.saveToStorage();
   }
 
@@ -913,6 +1438,11 @@ export class CurriculumDocsService {
     this.saveToStorage();
   }
 
+  public deleteCuadroActividades(id: string) {
+    this.cuadrosActividades = this.cuadrosActividades.filter((c) => c.id !== id);
+    this.saveToStorage();
+  }
+
   // --- TEMARIOS DE EVALUACIÓN ---
   public getTemariosEvaluacion(): CSSJTemarioEvaluacion[] {
     return [...this.temariosEvaluacion];
@@ -925,6 +1455,11 @@ export class CurriculumDocsService {
     } else {
       this.temariosEvaluacion.push(temario);
     }
+    this.saveToStorage();
+  }
+
+  public deleteTemarioEvaluacion(id: string) {
+    this.temariosEvaluacion = this.temariosEvaluacion.filter((t) => t.id !== id);
     this.saveToStorage();
   }
 

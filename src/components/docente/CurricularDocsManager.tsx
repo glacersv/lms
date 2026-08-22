@@ -12,6 +12,8 @@ import {
   Download,
   Plus,
   Edit3,
+  Trash2,
+  Copy,
   Award,
   Sparkles,
   Layers,
@@ -24,12 +26,17 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  Search,
+  X,
+  Save,
 } from 'lucide-react';
 import {
   curriculumDocsService,
   BTV_29_RUBRIC_ITEMS,
   CSSJ_IMPORTANT_DATES_2026,
+  CSSJ_ACADEMIC_SUBJECTS_CATALOG,
 } from '../../services/curriculumDocsService';
+import { BTV_GRAPHIC_DESIGN_COURSES, getModuleDescriptorData } from '../../services/btvCurriculumData';
 import { lmsService } from '../../services/lmsService';
 import {
   CSSJCalendarPeriod,
@@ -65,12 +72,28 @@ export const CurricularDocsManager: React.FC = () => {
   const [cuadrosActividades, setCuadrosActividades] = useState<CSSJCuadroActividades[]>([]);
   const [temarios, setTemarios] = useState<CSSJTemarioEvaluacion[]>([]);
 
-  // Selected items for view/edit
+  // Selected items for view
   const [selectedJorn, setSelectedJorn] = useState<CSSJJornalizacion | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<CSSJPlanDidactico | null>(null);
   const [selectedGuion, setSelectedGuion] = useState<CSSJGuionClase | null>(null);
   const [selectedCuadro, setSelectedCuadro] = useState<CSSJCuadroActividades | null>(null);
   const [selectedTemario, setSelectedTemario] = useState<CSSJTemarioEvaluacion | null>(null);
+
+  // Modal / Form state for Creating and Editing
+  const [activeModal, setActiveModal] = useState<
+    'none' | 'jornalizacion' | 'plan_didactico' | 'guion' | 'cuadro' | 'temario' | 'nuevo_curso'
+  >('none');
+  const [isEditingExisting, setIsEditingExisting] = useState(false);
+
+  // Form states
+  const [formJorn, setFormJorn] = useState<CSSJJornalizacion | null>(null);
+  const [formPlan, setFormPlan] = useState<CSSJPlanDidactico | null>(null);
+  const [formGuion, setFormGuion] = useState<CSSJGuionClase | null>(null);
+  const [formCuadro, setFormCuadro] = useState<CSSJCuadroActividades | null>(null);
+  const [formTemario, setFormTemario] = useState<CSSJTemarioEvaluacion | null>(null);
+
+  // Search filter for 26 BTV Technical Modules
+  const [moduleSearchQuery, setModuleSearchQuery] = useState('');
 
   // 29-items rubric state
   const [rubricScores, setRubricScores] = useState<Record<string, MinedLevel>>({});
@@ -85,31 +108,31 @@ export const CurricularDocsManager: React.FC = () => {
   const [selectedAxisFilter, setSelectedAxisFilter] = useState<'all' | 'tecnico' | 'emprendedor' | 'humano' | 'academico'>('all');
 
   // Load data
+  const loadAll = () => {
+    const c = curriculumDocsService.getCalendarPeriods();
+    const j = curriculumDocsService.getJornalizaciones();
+    const p = curriculumDocsService.getPlanesDidacticos();
+    const g = curriculumDocsService.getGuionesClase();
+    const cu = curriculumDocsService.getCuadrosActividades();
+    const t = curriculumDocsService.getTemariosEvaluacion();
+
+    setCalendarPeriods(c);
+    setJornalizaciones(j);
+    setPlanesDidacticos(p);
+    setGuionesClase(g);
+    setCuadrosActividades(cu);
+    setTemarios(t);
+
+    if (j.length > 0 && !selectedJorn) setSelectedJorn(j[0]);
+    if (p.length > 0 && !selectedPlan) setSelectedPlan(p[0]);
+    if (g.length > 0 && !selectedGuion) setSelectedGuion(g[0]);
+    if (cu.length > 0 && !selectedCuadro) setSelectedCuadro(cu[0]);
+    if (t.length > 0 && !selectedTemario) setSelectedTemario(t[0]);
+  };
+
   useEffect(() => {
-    const load = () => {
-      const c = curriculumDocsService.getCalendarPeriods();
-      const j = curriculumDocsService.getJornalizaciones();
-      const p = curriculumDocsService.getPlanesDidacticos();
-      const g = curriculumDocsService.getGuionesClase();
-      const cu = curriculumDocsService.getCuadrosActividades();
-      const t = curriculumDocsService.getTemariosEvaluacion();
-
-      setCalendarPeriods(c);
-      setJornalizaciones(j);
-      setPlanesDidacticos(p);
-      setGuionesClase(g);
-      setCuadrosActividades(cu);
-      setTemarios(t);
-
-      if (j.length > 0 && !selectedJorn) setSelectedJorn(j[0]);
-      if (p.length > 0 && !selectedPlan) setSelectedPlan(p[0]);
-      if (g.length > 0 && !selectedGuion) setSelectedGuion(g[0]);
-      if (cu.length > 0 && !selectedCuadro) setSelectedCuadro(cu[0]);
-      if (t.length > 0 && !selectedTemario) setSelectedTemario(t[0]);
-    };
-
-    load();
-    const unsub = curriculumDocsService.subscribe(load);
+    loadAll();
+    const unsub = curriculumDocsService.subscribe(loadAll);
     return () => unsub();
   }, []);
 
@@ -132,11 +155,399 @@ export const CurricularDocsManager: React.FC = () => {
     }));
   };
 
+  const showNotification = (msg: string) => {
+    setSavedSuccessMsg(msg);
+    setTimeout(() => setSavedSuccessMsg(null), 4500);
+  };
+
+  // --- ACTIONS FOR JORNALIZACIÓN ---
+  const handleOpenCreateJorn = () => {
+    setIsEditingExisting(false);
+    setFormJorn({
+      id: `jorn-${Date.now()}`,
+      docente: 'Licda. Karla Hernández',
+      gradoSeccion: '1° Año Bachillerato Técnico A',
+      asignatura: 'BTVDG1.7 Maquetación y Retícula Editorial',
+      totalSemanas: 40,
+      totalDias: 200,
+      horasSemanales: 18,
+      horasAnuales: 720,
+      trimestre1: { inicio: '02/02/2026', fin: '17/04/2026' },
+      trimestre2: { inicio: '20/04/2026', fin: '10/07/2026' },
+      trimestre3: { inicio: '13/07/2026', fin: '16/10/2026' },
+      unidades: [
+        {
+          unitNumber: 1,
+          title: 'Fundamentos de Retícula y Tipografía Editorial',
+          totalObjectives: 4,
+          classHours: 36,
+          fechaInicio: '02/02/2026',
+          fechaFin: '27/02/2026',
+        },
+        {
+          unitNumber: 2,
+          title: 'Maquetación Digital en Adobe InDesign',
+          totalObjectives: 6,
+          classHours: 54,
+          fechaInicio: '02/03/2026',
+          fechaFin: '27/03/2026',
+        },
+        {
+          unitNumber: 3,
+          title: 'Preprensa, Separación de Color y Encuadernación',
+          totalObjectives: 5,
+          classHours: 36,
+          fechaInicio: '06/04/2026',
+          fechaFin: '08/05/2026',
+        },
+      ],
+    });
+    setActiveModal('jornalizacion');
+  };
+
+  const handleOpenEditJorn = (jorn: CSSJJornalizacion) => {
+    setIsEditingExisting(true);
+    setFormJorn(JSON.parse(JSON.stringify(jorn)));
+    setActiveModal('jornalizacion');
+  };
+
+  const handleSaveJorn = () => {
+    if (!formJorn) return;
+    curriculumDocsService.saveJornalizacion(formJorn);
+    setSelectedJorn(formJorn);
+    setActiveModal('none');
+    showNotification('¡Jornalización Anual 2026 guardada exitosamente!');
+  };
+
+  const handleDeleteJorn = (id: string) => {
+    if (confirm('¿Estás seguro de eliminar esta Jornalización?')) {
+      curriculumDocsService.deleteJornalizacion(id);
+      const remaining = curriculumDocsService.getJornalizaciones();
+      setSelectedJorn(remaining.length > 0 ? remaining[0] : null);
+      showNotification('Jornalización eliminada.');
+    }
+  };
+
+  // --- ACTIONS FOR PLAN DIDÁCTICO ---
+  const handleOpenCreatePlan = () => {
+    setIsEditingExisting(false);
+    setFormPlan({
+      id: `plan-${Date.now()}`,
+      docente: 'Licda. Karla Hernández',
+      asignatura: 'BTVDG1.7 Maquetación y Retícula Editorial',
+      grado: '1° Año Técnico',
+      seccion: 'A',
+      unidadNumero: 1,
+      unidadNombre: 'Diseño Editorial y Grillas Modulares',
+      tiempoHoras: 36,
+      trimestrePeriodo: 'Bimestre 1',
+      competenciasAsignatura: 'Diseñar publicaciones impresas y digitales aplicando jerarquías tipográficas, retículas y estándares de preprensa.',
+      competenciasUnidad: 'Estructurar publicaciones editoriales de alta legibilidad usando grillas suizas e InDesign.',
+      contenidosConceptuales: [
+        'Anatomía tipográfica y familias tipográficas.',
+        'Retículas de manuscrito, columnas, modulares y jerárquicas.',
+        'Espaciado: tracking, kerning, interlineado y rejilla base.',
+      ],
+      contenidosProcedimentales: [
+        'Construcción manual de bocetos editoriales (dummies).',
+        'Configuración de páginas maestras, estilos de párrafo y carácter.',
+        'Manejo de flujo de texto y eliminación de líneas viudas/huérfanas.',
+      ],
+      contenidosActitudinales: [
+        'Rigor técnico y cuidado en la ortotipografía.',
+        'Puntualidad en la entrega de artes finales.',
+        'Ética profesional y respeto a derechos de autor.',
+      ],
+      indicadoresLogro: [
+        'Aplica con precisión matemática la retícula modular en el 100% de las páginas.',
+        'Genera estilos automatizados de carácter y párrafo en InDesign sin desbordes.',
+      ],
+      bibliografiaEgrafia: [
+        'Müller-Brockmann, J. (2018). Sistemas de retículas. Gustavo Gili.',
+        'Lupton, E. (2020). Pensar con tipos. Editorial Gustavo Gili.',
+      ],
+    });
+    setActiveModal('plan_didactico');
+  };
+
+  const handleOpenEditPlan = (plan: CSSJPlanDidactico) => {
+    setIsEditingExisting(true);
+    setFormPlan(JSON.parse(JSON.stringify(plan)));
+    setActiveModal('plan_didactico');
+  };
+
+  const handleSavePlan = () => {
+    if (!formPlan) return;
+    curriculumDocsService.savePlanDidactico(formPlan);
+    setSelectedPlan(formPlan);
+    setActiveModal('none');
+    showNotification('¡Plan Didáctico 2026 guardado exitosamente!');
+  };
+
+  const handleDeletePlan = (id: string) => {
+    if (confirm('¿Deseas eliminar este Plan Didáctico?')) {
+      curriculumDocsService.deletePlanDidactico(id);
+      const remaining = curriculumDocsService.getPlanesDidacticos();
+      setSelectedPlan(remaining.length > 0 ? remaining[0] : null);
+      showNotification('Plan Didáctico eliminado.');
+    }
+  };
+
+  // --- ACTIONS FOR GUIONES DE CLASE ---
+  const handleOpenCreateGuion = () => {
+    setIsEditingExisting(false);
+    setFormGuion({
+      id: `guion-${Date.now()}`,
+      docente: 'Licda. Karla Hernández',
+      gradoSeccion: '1° Año Bachillerato Técnico A',
+      asignatura: 'BTVDG1.7 Diseño Editorial',
+      fecha: new Date().toISOString().split('T')[0],
+      contenido: 'Maquetación de Doble Página con Retícula Modular',
+      tiempoMinutos: 90,
+      inicio: {
+        situacion: 'Preguntas diagnósticas de saberes previos: ¿Qué es una rejilla base y por qué evita el desalineado?',
+        estrategia: 'Lluvia de ideas guiada y muestra de revistas impresas reales.',
+        tipoEvaluacion: 'Diagnóstica (Sin nota num.)',
+      },
+      desarrollo: {
+        situacion: 'Demostración técnica en proyector: configuración de márgenes, medianiles y estilos en InDesign.',
+        estrategia: 'Práctica guiada en laboratorio paso a paso con acompañamiento personalizado.',
+        tipoEvaluacion: 'Formativa (Revisión de avance)',
+      },
+      cierre: {
+        situacion: 'Verificación de rúbrica técnica: cada alumno exporta PDF de prueba y revisa sangrados y texto.',
+        propuestaActividades: 'Entrega de archivo .INDD empaquetado en aula virtual.',
+        ponderacionPorcentaje: 10,
+        tipoEvaluacion: 'Sumativa (Actividad 35%)',
+        analisisDesempeno: 'El 85% logró alinear a la rejilla base sin desbordes.',
+      },
+      adaptacionesCurriculares: 'Se asigna tutor par a alumnos con menor experiencia en atajos de teclado de InDesign.',
+      tarea: 'Reunir 5 referencias de revistas de diseño para la siguiente sesión.',
+    });
+    setActiveModal('guion');
+  };
+
+  const handleOpenEditGuion = (guion: CSSJGuionClase) => {
+    setIsEditingExisting(true);
+    setFormGuion(JSON.parse(JSON.stringify(guion)));
+    setActiveModal('guion');
+  };
+
+  const handleSaveGuion = () => {
+    if (!formGuion) return;
+    curriculumDocsService.saveGuionClase(formGuion);
+    setSelectedGuion(formGuion);
+    setActiveModal('none');
+    showNotification('¡Guión de Clase 2026 guardado exitosamente!');
+  };
+
+  const handleDeleteGuion = (id: string) => {
+    if (confirm('¿Deseas eliminar este Guión de Clase?')) {
+      curriculumDocsService.deleteGuionClase(id);
+      const remaining = curriculumDocsService.getGuionesClase();
+      setSelectedGuion(remaining.length > 0 ? remaining[0] : null);
+      showNotification('Guión de Clase eliminado.');
+    }
+  };
+
+  // --- ACTIONS FOR CUADRO 35% ---
+  const handleOpenCreateCuadro = () => {
+    setIsEditingExisting(false);
+    setFormCuadro({
+      id: `cuadro-${Date.now()}`,
+      centroEducativo: 'Colegio Salesiano San José',
+      nivelEducativo: 'Educación Media Técnica',
+      gradoSeccion: '1° Año Técnico A',
+      docente: 'Licda. Karla Hernández',
+      trimestrePeriodo: 'Bimestre 1',
+      actividadTitulo: 'Actividad Formativa Integradora 1 (35%)',
+      fechaRango: '02/02/2026 al 20/03/2026',
+      subactividades: [
+        {
+          no: 1,
+          nombre: 'Subactividad 1: Bocetaje y Dummies',
+          descripcion: 'Elaboración de 3 propuestas de doble página con retícula manual.',
+          criteriosEvaluacion: 'Proporción, jerarquía y justificación conceptual.',
+          formato: 'Entrega en físico',
+          porcentaje: 30,
+          fechaEntrega: '20/02/2026',
+        },
+        {
+          no: 2,
+          nombre: 'Subactividad 2: Maquetación InDesign',
+          descripcion: 'Montaje digital con estilos y grilla modular.',
+          criteriosEvaluacion: 'Manejo de estilos, sangrados y cero errores de texto.',
+          formato: 'Plataforma LMS',
+          porcentaje: 40,
+          fechaEntrega: '06/03/2026',
+        },
+        {
+          no: 3,
+          nombre: 'Subactividad 3: Arte Final y Preprensa',
+          descripcion: 'Exportación de PDF/X-1a con marcas de corte y separación CMYK.',
+          criteriosEvaluacion: 'Resolución de imágenes (300 DPI) y sangrado exacto 3mm.',
+          formato: 'Plataforma LMS',
+          porcentaje: 30,
+          fechaEntrega: '20/03/2026',
+        },
+      ],
+      indicacionesCoordinacion: {
+        politicaRetraso: 'Toda entrega tardía justificada tendrá una penalización del 20% sobre la nota obtenida.',
+        limiteDias: 'Máximo 2 días hábiles posteriores a la fecha oficial para entregas extraordinarias.',
+        periodoExtraordinario: 'Quienes no justifiquen pasarán a evaluación extraordinaria en base 5.0.',
+        manualConvivencia: 'Alineado al Reglamento Interno y Manual de Convivencia CSSJ 2026.',
+      },
+    });
+    setActiveModal('cuadro');
+  };
+
+  const handleOpenEditCuadro = (cuadro: CSSJCuadroActividades) => {
+    setIsEditingExisting(true);
+    setFormCuadro(JSON.parse(JSON.stringify(cuadro)));
+    setActiveModal('cuadro');
+  };
+
+  const handleSaveCuadro = () => {
+    if (!formCuadro) return;
+    curriculumDocsService.saveCuadroActividades(formCuadro);
+    setSelectedCuadro(formCuadro);
+    setActiveModal('none');
+    showNotification('¡Cuadro de Actividades 35% guardado!');
+  };
+
+  // --- ACTIONS FOR TEMARIO 30% ---
+  const handleOpenCreateTemario = () => {
+    setIsEditingExisting(false);
+    setFormTemario({
+      id: `temario-${Date.now()}`,
+      asignatura: 'BTVDG1.7 Diseño Editorial',
+      gradoSeccion: '1° Año Bachillerato Técnico A',
+      docente: 'Licda. Karla Hernández',
+      periodo: 'Bimestre 1',
+      tipoEvaluacion: 'Prueba Práctica de Taller y Racional (30%)',
+      fechaAplicacion: '25/03/2026',
+      indicadoresLogro: [
+        'Construye retículas modulares complejas en InDesign en un tiempo límite de 90 min.',
+        'Configura adecuadamente la salida de preprensa y exportación PDF/X.',
+      ],
+      temasYPaginas: [
+        'Capítulo 1: La retícula suiza y sus variantes (pág. 12-45).',
+        'Capítulo 2: Anatomía de la página, medianiles y márgenes (pág. 46-78).',
+        'Laboratorio 3: Empaquetado y perfiles de color CMYK.',
+      ],
+      criteriosEvaluacion: 'Rigor técnico (60%), precisión tipográfica (20%) y sustentación de racional (20%).',
+    });
+    setActiveModal('temario');
+  };
+
+  const handleOpenEditTemario = (temario: CSSJTemarioEvaluacion) => {
+    setIsEditingExisting(true);
+    setFormTemario(JSON.parse(JSON.stringify(temario)));
+    setActiveModal('temario');
+  };
+
+  const handleSaveTemario = () => {
+    if (!formTemario) return;
+    curriculumDocsService.saveTemarioEvaluacion(formTemario);
+    setSelectedTemario(formTemario);
+    setActiveModal('none');
+    showNotification('¡Temario de Evaluación 30% guardado!');
+  };
+
+  // --- AUTOCOMPLETE FROM BTV MODULES (DOCENTES TÉCNICOS) ---
+  const handleSelectBTVModuleForPlan = (courseId: string) => {
+    const course = BTV_GRAPHIC_DESIGN_COURSES.find((c) => c.id === courseId);
+    if (!course || !formPlan) return;
+
+    const descriptor = getModuleDescriptorData(course.code);
+
+    setFormPlan({
+      ...formPlan,
+      asignatura: `${course.code} ${course.name}`,
+      grado: `${course.technicalYear}° Año Técnico`,
+      docente: course.teacherName,
+      tiempoHoras: course.hours,
+      competenciasAsignatura: descriptor.competenceGeneral || `Desarrollar competencias técnicas y creativas en ${course.name} respondiendo a las demandas de la industria publicitaria.`,
+      competenciasUnidad: descriptor.moduleObjective || course.description,
+      contenidosConceptuales: [
+        `Fundamentos y marco técnico de ${course.name}.`,
+        'Normativa técnica MINEDUCYT, formatos y estándares internacionales.',
+        'Sistemas, terminología técnica y flujo de trabajo en taller/laboratorio.',
+      ],
+      contenidosProcedimentales: [
+        `Aplicación práctica en laboratorio y proyectos para ${course.name}.`,
+        'Desarrollo de bocetos, pruebas técnicas, control de calidad y artes finales.',
+        'Dominio de herramientas profesionales, técnicas y software especializado.',
+      ],
+      contenidosActitudinales: [
+        'Responsabilidad, precisión y puntualidad en entregas profesionales.',
+        'Cuidado, orden, seguridad y ergonomía en el uso de los equipos salesianos.',
+        'Ética profesional, espíritu cooperativo y vivencia del carisma salesiano.',
+      ],
+      indicadoresLogro: descriptor.evaluationCriteria && descriptor.evaluationCriteria.length > 0
+        ? descriptor.evaluationCriteria
+        : [
+            `Aplica con destreza los conceptos y procedimientos de ${course.name}.`,
+            'Resuelve problemas de diseño aplicando la metodología de acción completa.',
+            'Entrega proyectos con calidad profesional según normas técnicas MINED.',
+          ],
+    });
+  };
+
+  // --- AUTOCOMPLETE FROM ACADEMIC SUBJECTS (MATERIAS ACADÉMICAS / TODOS LOS GRADOS) ---
+  const handleSelectAcademicSubjectForPlan = (subjectId: string) => {
+    const subject = CSSJ_ACADEMIC_SUBJECTS_CATALOG.find((s) => s.id === subjectId);
+    if (!subject || !formPlan) return;
+
+    setFormPlan({
+      ...formPlan,
+      asignatura: subject.name,
+      grado: subject.grade,
+      tiempoHoras: subject.weeklyHours * 4,
+      competenciasAsignatura: subject.competenciaGeneral,
+      competenciasUnidad: subject.defaultObjective,
+      contenidosConceptuales: subject.saberConocer,
+      contenidosProcedimentales: subject.saberHacer,
+      contenidosActitudinales: subject.saberSer,
+      indicadoresLogro: subject.indicadoresLogro,
+      bibliografiaEgrafia: subject.bibliografia,
+    });
+  };
+
+  const handleSelectSubjectForGuion = (subjectName: string, gradeName?: string) => {
+    if (!formGuion) return;
+    setFormGuion({
+      ...formGuion,
+      contenido: subjectName ? `Clase Magistral y Taller Aplicado: ${subjectName}` : formGuion.contenido,
+      gradoSeccion: gradeName || formGuion.gradoSeccion,
+    });
+  };
+
+  const handleSelectSubjectForJorn = (subjectId: string) => {
+    const subject = CSSJ_ACADEMIC_SUBJECTS_CATALOG.find((s) => s.id === subjectId);
+    if (!subject || !formJorn) return;
+
+    setFormJorn({
+      ...formJorn,
+      asignatura: subject.name,
+      gradoSeccion: subject.grade,
+      horasAnuales: subject.annualHours,
+      horasSemanales: subject.weeklyHours,
+    });
+  };
+
   const handleCreateCourseFromJorn = (jorn: CSSJJornalizacion) => {
+    const isTechnical = jorn.asignatura.startsWith('BTV') || jorn.asignatura.toLowerCase().includes('técnico') || jorn.asignatura.toLowerCase().includes('módulo');
+    const courseCode = isTechnical
+      ? (jorn.asignatura.split(' ')[0] || 'BTV-MOD')
+      : jorn.asignatura.substring(0, 4).toUpperCase().replace(/\s/g, '') + '-' + (jorn.gradoSeccion.substring(0, 2).replace(/\D/g, '') || '01');
+
     const newCourse = lmsService.addCourse({
       name: jorn.asignatura,
-      code: jorn.asignatura.split(' ')[0] || 'BTV-MOD',
-      description: `Módulo Técnico de ${jorn.horasAnuales}h anuales (${jorn.horasSemanales}h/sem) organizado en ${jorn.unidades.length} unidades según Jornalización CSSJ 2026.`,
+      code: courseCode,
+      description: isTechnical
+        ? `Módulo Técnico Vocacional de ${jorn.horasAnuales}h anuales (${jorn.horasSemanales}h/sem) organizado en ${jorn.unidades.length} unidades para ${jorn.gradoSeccion}.`
+        : `Asignatura Académica Oficial (${jorn.horasAnuales}h anuales, ${jorn.horasSemanales}h/semana) para ${jorn.gradoSeccion} — Jornalización CSSJ 2026.`,
       teacherName: jorn.docente,
       hours: jorn.horasAnuales,
       weeks: jorn.totalSemanas,
@@ -149,14 +560,13 @@ export const CurricularDocsManager: React.FC = () => {
       lmsService.addModule({
         courseId: newCourse.id,
         title: `Unidad ${u.unitNumber}: ${u.title}`,
-        description: `Carga horaria: ${u.classHours} horas clase (${u.totalObjectives} objetivos de aprendizaje). Periodo: ${u.fechaInicio} al ${u.fechaFin}.`,
+        description: `Carga horaria: ${u.classHours} horas clase (${u.totalObjectives} objetivos de aprendizaje). Periodo oficial: ${u.fechaInicio} al ${u.fechaFin}.`,
         order: idx + 1,
         hours: u.classHours,
       });
     });
 
-    setSavedSuccessMsg(`¡Curso y ${jorn.unidades.length} unidades creadas automáticamente en el Aula Virtual LMS!`);
-    setTimeout(() => setSavedSuccessMsg(null), 4000);
+    showNotification(`¡Asignatura/Módulo "${jorn.asignatura}" para ${jorn.gradoSeccion} creada con éxito en el Aula Virtual LMS!`);
   };
 
   const handlePrintDocument = () => {
@@ -175,26 +585,40 @@ export const CurricularDocsManager: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#124D37]/10 text-[#124D37] uppercase tracking-wide">
-              Gestión Curricular Institucional
+              Gestión Curricular Interactiva
             </span>
             <span className="text-xs font-bold text-slate-400">•</span>
             <span className="text-xs font-semibold text-slate-600">Colegio Salesiano San José — Año Lectivo 2026</span>
           </div>
           <h1 className="font-display font-extrabold text-2xl md:text-3xl text-slate-900 mt-1">
-            Planes, Jornalizaciones y Rúbricas Oficiales
+            Planes, Jornalizaciones, Guiones y Rúbricas Oficiales
           </h1>
           <p className="text-xs text-slate-500 max-w-3xl">
-            Alineación total entre la documentación pedagógica salesiana (Jornalización, Plan Didáctico, Guion, Cuadros 35%, Temarios 30%) y la matriz evaluativa de 29 ítems por competencias MINED.
+            Crea, edita y genera tus cursos en el LMS desde los formularios oficiales del Colegio Salesiano San José y evalúa con la Rúbrica Normativa de 29 Ítems MINED.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleOpenCreatePlan}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#124D37] hover:bg-[#0E3D2B] text-white flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nuevo Plan Didáctico</span>
+          </button>
+          <button
+            onClick={handleOpenCreateGuion}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#0D71B9] hover:bg-[#0a5a94] text-white flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nuevo Guion de Clase</span>
+          </button>
           <button
             onClick={() => setActiveTab('impresion')}
             className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition-colors"
           >
             <Printer className="w-4 h-4 text-slate-600" />
-            <span>Vista de Impresión Oficial</span>
+            <span>Imprimir Oficial</span>
           </button>
         </div>
       </div>
@@ -217,9 +641,7 @@ export const CurricularDocsManager: React.FC = () => {
         <button
           onClick={() => setActiveTab('guia_pasos')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'guia_pasos'
-              ? 'bg-[#124D37] text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+            activeTab === 'guia_pasos' ? 'bg-[#124D37] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <Sparkles className="w-4 h-4" />
@@ -229,9 +651,7 @@ export const CurricularDocsManager: React.FC = () => {
         <button
           onClick={() => setActiveTab('calendario')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'calendario'
-              ? 'bg-[#124D37] text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+            activeTab === 'calendario' ? 'bg-[#124D37] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <Calendar className="w-4 h-4" />
@@ -241,9 +661,7 @@ export const CurricularDocsManager: React.FC = () => {
         <button
           onClick={() => setActiveTab('jornalizacion')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'jornalizacion'
-              ? 'bg-[#124D37] text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+            activeTab === 'jornalizacion' ? 'bg-[#124D37] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <Clock className="w-4 h-4" />
@@ -253,21 +671,17 @@ export const CurricularDocsManager: React.FC = () => {
         <button
           onClick={() => setActiveTab('plan_didactico')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'plan_didactico'
-              ? 'bg-[#124D37] text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+            activeTab === 'plan_didactico' ? 'bg-[#124D37] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <BookOpen className="w-4 h-4" />
-          <span>4. Plan Didáctico (Saberes)</span>
+          <Layers className="w-4 h-4" />
+          <span>4. Plan Didáctico (3 Saberes)</span>
         </button>
 
         <button
           onClick={() => setActiveTab('guiones')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'guiones'
-              ? 'bg-[#124D37] text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+            activeTab === 'guiones' ? 'bg-[#124D37] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <FileText className="w-4 h-4" />
@@ -277,46 +691,50 @@ export const CurricularDocsManager: React.FC = () => {
         <button
           onClick={() => setActiveTab('cuadros')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'cuadros'
-              ? 'bg-[#124D37] text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+            activeTab === 'cuadros' ? 'bg-[#124D37] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <ClipboardList className="w-4 h-4" />
-          <span>6. Cuadros Actividades (35%)</span>
+          <span>6. Cuadros 35%</span>
         </button>
 
         <button
           onClick={() => setActiveTab('temarios')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'temarios'
-              ? 'bg-[#124D37] text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+            activeTab === 'temarios' ? 'bg-[#124D37] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <HelpCircle className="w-4 h-4" />
-          <span>7. Temarios (30%)</span>
+          <BookOpen className="w-4 h-4" />
+          <span>7. Temarios 30%</span>
         </button>
 
         <button
           onClick={() => setActiveTab('rubrica_29')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'rubrica_29'
-              ? 'bg-[#D97706] text-white shadow-xs'
-              : 'text-amber-700 bg-amber-50 hover:bg-amber-100'
+            activeTab === 'rubrica_29' ? 'bg-[#124D37] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <Award className="w-4 h-4" />
-          <span>8. Rúbrica 29 Ítems BTV</span>
+          <span>8. Rúbrica 29 Ítems (BTV)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('impresion')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-colors ${
+            activeTab === 'impresion' ? 'bg-[#124D37] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Printer className="w-4 h-4" />
+          <span>9. Imprimir Membrete</span>
         </button>
       </div>
 
       {/* ============================================================ */}
-      {/* TAB 1: RUTA PASO A PASO EXPLICATIVA */}
+      {/* TAB 1: RUTA PASO A PASO */}
       {/* ============================================================ */}
       {activeTab === 'guia_pasos' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="bg-gradient-to-r from-[#124D37] to-[#0A3022] p-6 rounded-2xl text-white shadow-md">
+          <div className="bg-gradient-to-r from-[#124D37] to-[#1E6B4E] rounded-3xl p-6 md:p-8 text-white shadow-lg">
             <span className="text-xs font-extrabold uppercase tracking-widest text-[#E6C35C] block mb-1">
               Manual y Metodología de Alimentación Curricular 2026
             </span>
@@ -324,215 +742,162 @@ export const CurricularDocsManager: React.FC = () => {
               ¿Cómo se alimenta el Aula Virtual desde los Documentos del Colegio Salesiano San José?
             </h2>
             <p className="text-xs text-emerald-100 mt-2 max-w-3xl leading-relaxed">
-              Cada documento institucional que tú o la coordinación llenan en papel o Word alimenta un componente vivo del sistema. A continuación se detalla la secuencia pedagógica exacta:
+              Cada formulario interactivo alimenta directamente el sistema. La coordinación define el calendario institucional y los docentes crean sus planes, guiones y cuadros de evaluación con autocompletado de los 26 módulos técnicos.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Step 1 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 relative overflow-hidden">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
               <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#0D71B9] font-display font-bold text-sm flex items-center justify-center">
                 1
               </div>
               <h3 className="font-display font-bold text-slate-900 text-sm">Calendario Académico 2026</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Establece los <strong>4 periodos/bimestres</strong> (Educación Media) o <strong>3 trimestres</strong> (Básica), fijando las fechas de actividades 35%, pruebas 30%, entrega a TBox y fichas de proyecto.
+                Coordinación establece los 4 periodos (Media) o 3 trimestres (Básica) y las fechas oficiales de entrega a TBox.
               </p>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-[#0D71B9] font-bold">
-                <span>Alimenta: Periodos y Fechas Límite</span>
-                <button onClick={() => setActiveTab('calendario')} className="hover:underline flex items-center gap-1">
-                  Ver Calendario <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
+              <button onClick={() => setActiveTab('calendario')} className="text-xs font-bold text-[#0D71B9] hover:underline flex items-center gap-1">
+                Ver Calendario <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
 
-            {/* Step 2 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 relative overflow-hidden">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
               <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#124D37] font-display font-bold text-sm flex items-center justify-center">
                 2
               </div>
-              <h3 className="font-display font-bold text-slate-900 text-sm">Jornalización Anual 2026</h3>
+              <h3 className="font-display font-bold text-slate-900 text-sm">Jornalización Anual (40 Semanas)</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Distribuye las <strong>40 semanas</strong> (200 días) y las <strong>horas anuales</strong> (160h académicas o 720h/1200h técnicas) en las 10 unidades con fechas <code>INI</code> y <code>FIN</code>.
+                Formulario para registrar horas (160h o 720h/1200h) y fechas de unidades. Cuenta con botón de generación de cursos en LMS.
               </p>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-[#124D37] font-bold">
-                <span>Alimenta: Creación de Cursos y Unidades</span>
-                <button onClick={() => setActiveTab('jornalizacion')} className="hover:underline flex items-center gap-1">
-                  Ver Jornalización <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
+              <button onClick={() => setActiveTab('jornalizacion')} className="text-xs font-bold text-[#124D37] hover:underline flex items-center gap-1">
+                Abrir Formulario Jornalización <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
 
-            {/* Step 3 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 relative overflow-hidden">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
               <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 font-display font-bold text-sm flex items-center justify-center">
                 3
               </div>
-              <h3 className="font-display font-bold text-slate-900 text-sm">Planificación Didáctica</h3>
+              <h3 className="font-display font-bold text-slate-900 text-sm">Plan Didáctico (3 Saberes)</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Desglosa los 3 saberes MINED: <strong>Saber Conocer</strong> (Conceptuales), <strong>Saber Hacer</strong> (Procedimentales) y <strong>Saber Ser</strong> (Actitudinales) + Indicadores y APA 7.
+                El docente selecciona el módulo BTV y el formulario autocompleta los saberes: Conocer, Hacer, Ser y bibliografía APA 7.
               </p>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-purple-700 font-bold">
-                <span>Alimenta: Contenidos y Descriptores</span>
-                <button onClick={() => setActiveTab('plan_didactico')} className="hover:underline flex items-center gap-1">
-                  Ver Plan Didáctico <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
+              <button onClick={() => setActiveTab('plan_didactico')} className="text-xs font-bold text-purple-700 hover:underline flex items-center gap-1">
+                Crear / Editar Planes <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
 
-            {/* Step 4 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 relative overflow-hidden">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
               <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 font-display font-bold text-sm flex items-center justify-center">
                 4
               </div>
-              <h3 className="font-display font-bold text-slate-900 text-sm">Guiones de Clase</h3>
+              <h3 className="font-display font-bold text-slate-900 text-sm">Guiones de Clase Diarios</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Estructura la secuencia didáctica diaria: <strong>Inicio (Diagnóstica)</strong>, <strong>Desarrollo (Formativa)</strong> y <strong>Cierre (Sumativa %)</strong> con adaptaciones curriculares.
+                Secuencia didáctica: Inicio (Diagnóstica), Desarrollo (Formativa) y Cierre (Sumativa %) con adaptaciones curriculares.
               </p>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-amber-700 font-bold">
-                <span>Alimenta: Lecciones y Prácticas</span>
-                <button onClick={() => setActiveTab('guiones')} className="hover:underline flex items-center gap-1">
-                  Ver Guiones <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
+              <button onClick={() => setActiveTab('guiones')} className="text-xs font-bold text-amber-700 hover:underline flex items-center gap-1">
+                Crear Guiones de Clase <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
 
-            {/* Step 5 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 relative overflow-hidden">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
               <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 font-display font-bold text-sm flex items-center justify-center">
                 5
               </div>
               <h3 className="font-display font-bold text-slate-900 text-sm">Cuadro de Actividades (35%)</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Publica las subactividades ponderadas (Físicas/LMS) con sus rúbricas adjuntas y las normativas de entrega a tiempo y periodos extraordinarios del colegio.
+                Configuración de subactividades ponderadas en físico o plataforma LMS con las políticas institucionales del CSSJ.
               </p>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-rose-700 font-bold">
-                <span>Alimenta: Tareas y Evaluaciones</span>
-                <button onClick={() => setActiveTab('cuadros')} className="hover:underline flex items-center gap-1">
-                  Ver Cuadros <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
+              <button onClick={() => setActiveTab('cuadros')} className="text-xs font-bold text-rose-700 hover:underline flex items-center gap-1">
+                Gestionar Cuadros 35% <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
 
-            {/* Step 6 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 relative overflow-hidden">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
               <div className="w-8 h-8 rounded-xl bg-amber-500 text-white font-display font-bold text-sm flex items-center justify-center">
                 6
               </div>
               <h3 className="font-display font-bold text-slate-900 text-sm">Rúbrica de 29 Ítems BTV</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Matriz de evaluación exhaustiva de <strong>Diseño Gráfico (MINED)</strong> con sus 29 criterios en los 4 Ejes (Técnico 35%, Emprendedor 25%, Humano 20%, Académico 20%).
+                Evaluador en escala 1 al 5 en los 4 Ejes (Técnico 35%, Emprendedor 25%, Humano 20%, Académico 20%).
               </p>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-amber-700 font-bold">
-                <span>Alimenta: Calificación por Competencias</span>
-                <button onClick={() => setActiveTab('rubrica_29')} className="hover:underline flex items-center gap-1">
-                  Abrir Rúbrica 29 Ítems <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
+              <button onClick={() => setActiveTab('rubrica_29')} className="text-xs font-bold text-amber-700 hover:underline flex items-center gap-1">
+                Abrir Rúbrica 29 Ítems <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* ============================================================ */}
-      {/* TAB 2: CALENDARIO ACADÉMICO 2026 CSSJ */}
+      {/* TAB 2: CALENDARIO ACADÉMICO 2026 */}
       {/* ============================================================ */}
       {activeTab === 'calendario' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200">
             <div>
-              <h2 className="font-display font-bold text-lg text-slate-900">
+              <h2 className="font-display font-bold text-base text-slate-900">
                 Calendario Académico Institucional 2026 — Colegio Salesiano San José
               </h2>
               <p className="text-xs text-slate-500">
-                Educación Media (Bimestres/Periodos) y Educación Básica/Parvularia (Trimestres).
+                Definido por Coordinación General: Media (4 Bimestres) y Básica/Parvularia (3 Trimestres).
               </p>
             </div>
-            <span className="px-3 py-1 bg-blue-50 text-[#0D71B9] text-xs font-bold rounded-lg">
-              Año Lectivo 2026
-            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {calendarPeriods.map((period) => (
-              <div key={period.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-bold text-slate-900 text-sm text-[#124D37]">
-                    {period.name}
-                  </h3>
-                  <span className="text-[11px] font-bold px-2 py-0.5 bg-slate-100 rounded text-slate-600">
-                    Nivel: {period.level}
+              <div key={period.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-3 h-3 rounded-full ${period.nivel === 'media' ? 'bg-[#124D37]' : 'bg-[#0D71B9]'}`} />
+                    <h3 className="font-display font-bold text-sm text-slate-900">{period.periodoNombre}</h3>
+                  </div>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase">
+                    {period.nivel === 'media' ? 'Educación Media' : 'Básica'}
                   </span>
                 </div>
 
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-2.5 bg-slate-50 rounded-xl">
+                    <span className="text-slate-400 font-semibold block text-[10px]">Fecha Inicio</span>
+                    <span className="font-bold text-slate-800">{period.fechaInicio}</span>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 rounded-xl">
+                    <span className="text-slate-400 font-semibold block text-[10px]">Fecha Finalización</span>
+                    <span className="font-bold text-slate-800">{period.fechaFin}</span>
+                  </div>
+                </div>
+
                 <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
-                    <span className="text-slate-600 font-semibold">1ª Actividad (35%):</span>
-                    <span className="font-bold text-slate-800">
-                      {period.actividad1_35?.inicio} al {period.actividad1_35?.fin}
-                    </span>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Subida de notas a TBox:</span>
+                    <strong className="text-[#0D71B9]">{period.entregaTbox}</strong>
                   </div>
-
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
-                    <span className="text-slate-600 font-semibold">2ª Actividad (35%):</span>
-                    <span className="font-bold text-slate-800">
-                      {period.actividad2_35?.inicio} al {period.actividad2_35?.fin}
-                    </span>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Actividad 1 (35%):</span>
+                    <strong className="text-slate-800">{period.actividad1_35}</strong>
                   </div>
-
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50/60 text-amber-900">
-                    <span className="font-semibold">Refuerzo Académico:</span>
-                    <span className="font-bold">
-                      {period.refuerzo?.inicio} al {period.refuerzo?.fin}
-                    </span>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Actividad 2 (35%):</span>
+                    <strong className="text-slate-800">{period.actividad2_35}</strong>
                   </div>
-
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50/60 text-blue-900">
-                    <span className="font-semibold">Pruebas Objetivas (30%):</span>
-                    <span className="font-bold">
-                      {period.pruebaObjetiva_30?.inicio} al {period.pruebaObjetiva_30?.fin}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 text-emerald-900">
-                    <span className="font-semibold">Entrega de Boletas:</span>
-                    <span className="font-bold">{period.boletasCalificaciones}</span>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Evaluación Periodo (30%):</span>
+                    <strong className="text-slate-800">{period.pruebaPeriodo_30}</strong>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-
-          {/* Important salesian dates */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <h3 className="font-display font-bold text-slate-900 text-sm flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#D97706]" />
-              <span>Hitos y Fiestas Salesianas en la Jornalización 2026</span>
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {CSSJ_IMPORTANT_DATES_2026.map((dateItem, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-3">
-                  <div className="w-12 h-10 rounded-lg bg-[#124D37] text-white flex flex-col items-center justify-center font-display leading-tight shrink-0">
-                    <span className="text-[10px] uppercase">{dateItem.mes.slice(0, 3)}</span>
-                    <span className="text-xs font-extrabold">{dateItem.dia}</span>
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 block leading-tight">{dateItem.evento}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
       {/* ============================================================ */}
-      {/* TAB 3: JORNALIZACIÓN ANUAL 2026 */}
+      {/* TAB 3: JORNALIZACIÓN ANUAL (FORMULARIO Y LISTADO) */}
       {/* ============================================================ */}
       {activeTab === 'jornalizacion' && (
         <div className="space-y-6 animate-fade-in">
-          {/* Selector */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200">
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-500">Seleccionar Jornalización:</span>
               <select
@@ -551,91 +916,88 @@ export const CurricularDocsManager: React.FC = () => {
               </select>
             </div>
 
-            {selectedJorn && (
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => handleCreateCourseFromJorn(selectedJorn)}
-                className="px-4 py-2 rounded-xl bg-[#124D37] text-white text-xs font-bold flex items-center gap-2 hover:bg-[#0E3D2B] transition-colors shadow-xs"
+                onClick={handleOpenCreateJorn}
+                className="px-3.5 py-2 rounded-xl bg-[#124D37] text-white text-xs font-bold flex items-center gap-1.5 hover:bg-[#0E3D2B] transition-colors"
               >
-                <FolderPlus className="w-4 h-4" />
-                <span>Generar Curso y Módulos en LMS desde esta Jornalización</span>
+                <Plus className="w-4 h-4" />
+                <span>Nueva Jornalización</span>
               </button>
-            )}
+              {selectedJorn && (
+                <>
+                  <button
+                    onClick={() => handleOpenEditJorn(selectedJorn)}
+                    className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span>Editar</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteJorn(selectedJorn.id)}
+                    className="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold flex items-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {selectedJorn && (
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
-              {/* Document Header CSSJ Style */}
               <div className="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <span className="text-xs font-extrabold text-[#124D37] uppercase tracking-wider block">
                     Colegio Salesiano San José • Santa Ana
                   </span>
                   <h3 className="font-display font-extrabold text-xl text-slate-900">
-                    Jornalización Anual — Año Escolar Lectivo 2026
+                    Jornalización Anual 2026 — {selectedJorn.asignatura}
                   </h3>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 mt-2">
                     <span><strong>Docente:</strong> {selectedJorn.docente}</span>
-                    <span><strong>Grado y Sección:</strong> {selectedJorn.gradoSeccion}</span>
-                    <span><strong>Asignatura/Módulo:</strong> {selectedJorn.asignatura}</span>
+                    <span><strong>Grado:</strong> {selectedJorn.gradoSeccion}</span>
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-right">
-                  <div className="text-xs text-slate-500 font-semibold">Total Semanas / Días</div>
-                  <div className="text-base font-black text-[#124D37]">
-                    {selectedJorn.totalSemanas} Semanas • {selectedJorn.totalDias} Días
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-right">
+                    <div className="text-xs text-slate-500 font-semibold">Total Horas / Semanas</div>
+                    <div className="text-base font-black text-[#124D37]">
+                      {selectedJorn.horasAnuales}h Anuales • {selectedJorn.totalSemanas} Semanas
+                    </div>
                   </div>
-                  <div className="text-[11px] text-slate-500 font-bold">
-                    {selectedJorn.horasSemanales}h/sem • {selectedJorn.horasAnuales}h anuales
-                  </div>
+                  <button
+                    onClick={() => handleCreateCourseFromJorn(selectedJorn)}
+                    className="px-4 py-3 rounded-xl bg-[#124D37] text-white text-xs font-bold flex items-center gap-2 hover:bg-[#0E3D2B] shadow-sm transition-colors"
+                  >
+                    <FolderPlus className="w-4 h-4" />
+                    <span>Crear Curso en LMS</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Trimestres Schedule */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 text-xs">
-                  <span className="font-bold text-[#0D71B9] block">Trimestre 1</span>
-                  <span className="text-slate-700">Inicio: <strong>{selectedJorn.trimestre1.inicio}</strong></span>
-                  <br />
-                  <span className="text-slate-700">Finalización: <strong>{selectedJorn.trimestre1.fin}</strong></span>
-                </div>
-                <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 text-xs">
-                  <span className="font-bold text-[#0D71B9] block">Trimestre 2</span>
-                  <span className="text-slate-700">Inicio: <strong>{selectedJorn.trimestre2.inicio}</strong></span>
-                  <br />
-                  <span className="text-slate-700">Finalización: <strong>{selectedJorn.trimestre2.fin}</strong></span>
-                </div>
-                <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 text-xs">
-                  <span className="font-bold text-[#0D71B9] block">Trimestre 3</span>
-                  <span className="text-slate-700">Inicio: <strong>{selectedJorn.trimestre3.inicio}</strong></span>
-                  <br />
-                  <span className="text-slate-700">Finalización: <strong>{selectedJorn.trimestre3.fin}</strong></span>
-                </div>
-              </div>
-
-              {/* Units Table (Exact format of CSSJ) */}
+              {/* Units Table */}
               <div>
                 <h4 className="font-display font-bold text-slate-900 text-sm mb-3">
-                  Distribución de Horas Clase y Fechas por Unidad ({selectedJorn.unidades.length} Unidades)
+                  Unidades Didácticas ({selectedJorn.unidades.length} Unidades)
                 </h4>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
                     <thead className="bg-[#124D37] text-white">
                       <tr>
                         <th className="p-3 text-center w-12">N°</th>
-                        <th className="p-3">Nombre de la Unidad / Módulo</th>
+                        <th className="p-3">Nombre de la Unidad</th>
                         <th className="p-3 text-center">Objetivos</th>
                         <th className="p-3 text-center">Horas Clase</th>
-                        <th className="p-3 text-center">Fecha Inicio</th>
-                        <th className="p-3 text-center">Fecha Fin</th>
+                        <th className="p-3 text-center">Inicio</th>
+                        <th className="p-3 text-center">Fin</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {selectedJorn.unidades.map((u) => (
                         <tr key={u.unitNumber} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-3 text-center font-bold text-slate-500 bg-slate-50">
-                            {u.unitNumber}
-                          </td>
+                          <td className="p-3 text-center font-bold text-slate-500 bg-slate-50">{u.unitNumber}</td>
                           <td className="p-3 font-semibold text-slate-800">{u.title}</td>
                           <td className="p-3 text-center font-bold text-slate-600">{u.totalObjectives}</td>
                           <td className="p-3 text-center font-bold text-[#124D37]">{u.classHours}h</td>
@@ -653,14 +1015,13 @@ export const CurricularDocsManager: React.FC = () => {
       )}
 
       {/* ============================================================ */}
-      {/* TAB 4: PLANIFICACIÓN DIDÁCTICA 2026 */}
+      {/* TAB 4: PLANIFICACIÓN DIDÁCTICA (3 SABERES) */}
       {/* ============================================================ */}
       {activeTab === 'plan_didactico' && (
         <div className="space-y-6 animate-fade-in">
-          {/* Selector */}
-          <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-500">Plan Didáctico:</span>
+              <span className="text-xs font-bold text-slate-500">Seleccionar Plan:</span>
               <select
                 value={selectedPlan?.id || ''}
                 onChange={(e) => {
@@ -676,112 +1037,86 @@ export const CurricularDocsManager: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleOpenCreatePlan}
+                className="px-3.5 py-2 rounded-xl bg-[#124D37] text-white text-xs font-bold flex items-center gap-1.5 hover:bg-[#0E3D2B] transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nuevo Plan Didáctico</span>
+              </button>
+              {selectedPlan && (
+                <>
+                  <button
+                    onClick={() => handleOpenEditPlan(selectedPlan)}
+                    className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span>Editar</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeletePlan(selectedPlan.id)}
+                    className="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold flex items-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {selectedPlan && (
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
-              {/* Official Header */}
               <div className="border-b border-slate-200 pb-4">
                 <span className="text-xs font-extrabold text-[#124D37] uppercase tracking-wider block">
                   Colegio Salesiano San José
                 </span>
                 <h3 className="font-display font-extrabold text-xl text-slate-900">
-                  Planificación Didáctica 2026 — {selectedPlan.grado} "{selectedPlan.seccion}"
+                  Plan Didáctico 2026 — {selectedPlan.grado} "{selectedPlan.seccion}" ({selectedPlan.asignatura})
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-slate-600 mt-3 p-3 bg-slate-50 rounded-xl">
                   <div><strong>Docente:</strong> {selectedPlan.docente}</div>
-                  <div><strong>Asignatura:</strong> {selectedPlan.asignatura}</div>
                   <div><strong>Periodo:</strong> {selectedPlan.trimestrePeriodo}</div>
                   <div><strong>Tiempo:</strong> {selectedPlan.tiempoHoras} horas</div>
+                  <div><strong>Unidad {selectedPlan.unidadNumero}:</strong> {selectedPlan.unidadNombre}</div>
                 </div>
               </div>
 
-              {/* Competencias */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 space-y-1">
-                  <span className="text-xs font-bold text-[#0D71B9] uppercase tracking-wider block">
-                    Competencias de la Asignatura
+              {/* 3 Saberes */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <span className="text-xs font-extrabold text-[#0D71B9] uppercase tracking-wider block border-b border-slate-200 pb-1">
+                    Saber Conocer (Conceptuales)
                   </span>
-                  <p className="text-xs text-slate-700 leading-relaxed">{selectedPlan.competenciasAsignatura}</p>
+                  <ul className="space-y-1.5 text-xs text-slate-700 list-disc list-inside">
+                    {selectedPlan.contenidosConceptuales.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
                 </div>
-                <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 space-y-1">
-                  <span className="text-xs font-bold text-[#124D37] uppercase tracking-wider block">
-                    Competencias de la Unidad
+
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <span className="text-xs font-extrabold text-[#124D37] uppercase tracking-wider block border-b border-slate-200 pb-1">
+                    Saber Hacer (Procedimentales)
                   </span>
-                  <p className="text-xs text-slate-700 leading-relaxed">{selectedPlan.competenciasUnidad}</p>
+                  <ul className="space-y-1.5 text-xs text-slate-700 list-disc list-inside">
+                    {selectedPlan.contenidosProcedimentales.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
 
-              {/* 3 Saberes MINEDUCYT (Conocer, Hacer, Ser) */}
-              <div>
-                <h4 className="font-display font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-[#124D37]" />
-                  <span>Contenidos Curriculares por Ejes de Saberes (Extraídos del programa MINEDUCYT)</span>
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Conocer */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                    <span className="text-xs font-extrabold text-[#0D71B9] uppercase tracking-wider block border-b border-slate-200 pb-1">
-                      Contenidos Conceptuales (Saber Conocer)
-                    </span>
-                    <ul className="space-y-1.5 text-xs text-slate-700 list-disc list-inside">
-                      {selectedPlan.contenidosConceptuales.map((c, i) => (
-                        <li key={i} className="leading-tight">{c}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Hacer */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                    <span className="text-xs font-extrabold text-[#124D37] uppercase tracking-wider block border-b border-slate-200 pb-1">
-                      Contenidos Procedimentales (Saber Hacer)
-                    </span>
-                    <ul className="space-y-1.5 text-xs text-slate-700 list-disc list-inside">
-                      {selectedPlan.contenidosProcedimentales.map((c, i) => (
-                        <li key={i} className="leading-tight">{c}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Ser */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                    <span className="text-xs font-extrabold text-[#D97706] uppercase tracking-wider block border-b border-slate-200 pb-1">
-                      Contenidos Actitudinales (Saber Ser)
-                    </span>
-                    <ul className="space-y-1.5 text-xs text-slate-700 list-disc list-inside">
-                      {selectedPlan.contenidosActitudinales.map((c, i) => (
-                        <li key={i} className="leading-tight">{c}</li>
-                      ))}
-                    </ul>
-                  </div>
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <span className="text-xs font-extrabold text-[#D97706] uppercase tracking-wider block border-b border-slate-200 pb-1">
+                    Saber Ser (Actitudinales)
+                  </span>
+                  <ul className="space-y-1.5 text-xs text-slate-700 list-disc list-inside">
+                    {selectedPlan.contenidosActitudinales.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-
-              {/* Indicadores de logro */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
-                  Indicadores de Logro (MINEDUCYT)
-                </span>
-                <div className="space-y-1.5 text-xs text-slate-700">
-                  {selectedPlan.indicadoresLogro.map((ind, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-[#124D37] shrink-0 mt-0.5" />
-                      <span>{ind}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Bibliografía APA 7 */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
-                  Bibliografía y Egrafía Oficial (Normas APA 7ma Edición)
-                </span>
-                <ul className="space-y-1 text-xs text-slate-600 italic">
-                  {selectedPlan.bibliografiaEgrafia.map((b, i) => (
-                    <li key={i}>• {b}</li>
-                  ))}
-                </ul>
               </div>
             </div>
           )}
@@ -793,6 +1128,53 @@ export const CurricularDocsManager: React.FC = () => {
       {/* ============================================================ */}
       {activeTab === 'guiones' && (
         <div className="space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-500">Seleccionar Guion:</span>
+              <select
+                value={selectedGuion?.id || ''}
+                onChange={(e) => {
+                  const g = guionesClase.find((item) => item.id === e.target.value);
+                  if (g) setSelectedGuion(g);
+                }}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white"
+              >
+                {guionesClase.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.fecha} — {g.contenido} ({g.asignatura})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleOpenCreateGuion}
+                className="px-3.5 py-2 rounded-xl bg-[#124D37] text-white text-xs font-bold flex items-center gap-1.5 hover:bg-[#0E3D2B] transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nuevo Guion de Clase</span>
+              </button>
+              {selectedGuion && (
+                <>
+                  <button
+                    onClick={() => handleOpenEditGuion(selectedGuion)}
+                    className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span>Editar</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteGuion(selectedGuion.id)}
+                    className="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold flex items-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
           {selectedGuion && (
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
               <div className="border-b border-slate-200 pb-4">
@@ -807,64 +1189,30 @@ export const CurricularDocsManager: React.FC = () => {
                 </h3>
                 <div className="flex flex-wrap gap-4 text-xs text-slate-600 mt-2">
                   <span><strong>Docente:</strong> {selectedGuion.docente}</span>
-                  <span><strong>Grado y Sección:</strong> {selectedGuion.gradoSeccion}</span>
+                  <span><strong>Asignatura:</strong> {selectedGuion.asignatura}</span>
+                  <span><strong>Grado:</strong> {selectedGuion.gradoSeccion}</span>
                   <span><strong>Tiempo:</strong> {selectedGuion.tiempoMinutos} min</span>
                 </div>
               </div>
 
               {/* Situaciones de Aprendizaje vs Evaluación */}
               <div className="space-y-4">
-                <h4 className="font-display font-bold text-slate-900 text-sm">
-                  Secuencia Didáctica: Situaciones de Aprendizaje vs. Evaluación
-                </h4>
-
-                {/* Inicio */}
-                <div className="p-4 rounded-xl bg-blue-50/40 border border-blue-100 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#0D71B9] uppercase">1. Inicio</span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 bg-blue-100 text-[#0D71B9] rounded">
-                      {selectedGuion.inicio.tipoEvaluacion}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-800 leading-relaxed font-medium">{selectedGuion.inicio.situacion}</p>
+                <div className="p-4 rounded-xl bg-blue-50/40 border border-blue-100 space-y-1">
+                  <span className="text-xs font-bold text-[#0D71B9] uppercase">1. Inicio (Diagnóstica)</span>
+                  <p className="text-xs text-slate-800 font-medium">{selectedGuion.inicio.situacion}</p>
                   <p className="text-[11px] text-slate-500 italic">{selectedGuion.inicio.estrategia}</p>
                 </div>
 
-                {/* Desarrollo */}
-                <div className="p-4 rounded-xl bg-emerald-50/40 border border-emerald-100 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#124D37] uppercase">2. Desarrollo</span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 bg-emerald-100 text-[#124D37] rounded">
-                      {selectedGuion.desarrollo.tipoEvaluacion}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-800 leading-relaxed font-medium">{selectedGuion.desarrollo.situacion}</p>
+                <div className="p-4 rounded-xl bg-emerald-50/40 border border-emerald-100 space-y-1">
+                  <span className="text-xs font-bold text-[#124D37] uppercase">2. Desarrollo (Formativa)</span>
+                  <p className="text-xs text-slate-800 font-medium">{selectedGuion.desarrollo.situacion}</p>
                   <p className="text-[11px] text-slate-500 italic">{selectedGuion.desarrollo.estrategia}</p>
                 </div>
 
-                {/* Cierre */}
-                <div className="p-4 rounded-xl bg-amber-50/40 border border-amber-100 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-amber-800 uppercase">3. Cierre / Finalización</span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
-                      {selectedGuion.cierre.tipoEvaluacion} ({selectedGuion.cierre.ponderacionPorcentaje}%)
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-800 leading-relaxed font-medium">{selectedGuion.cierre.situacion}</p>
+                <div className="p-4 rounded-xl bg-amber-50/40 border border-amber-100 space-y-1">
+                  <span className="text-xs font-bold text-amber-800 uppercase">3. Cierre (Sumativa {selectedGuion.cierre.ponderacionPorcentaje}%)</span>
+                  <p className="text-xs text-slate-800 font-medium">{selectedGuion.cierre.situacion}</p>
                   <p className="text-[11px] text-slate-600">{selectedGuion.cierre.propuestaActividades}</p>
-                  <p className="text-[11px] text-slate-500 italic">Análisis de Desempeño: {selectedGuion.cierre.analisisDesempeno}</p>
-                </div>
-              </div>
-
-              {/* Adaptaciones curriculares & Tarea */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="font-bold text-slate-900 block mb-1">Adaptaciones Curriculares:</span>
-                  <p className="text-slate-600">{selectedGuion.adaptacionesCurriculares}</p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="font-bold text-slate-900 block mb-1">Tarea para Casa:</span>
-                  <p className="text-slate-600">{selectedGuion.tarea}</p>
                 </div>
               </div>
             </div>
@@ -873,10 +1221,49 @@ export const CurricularDocsManager: React.FC = () => {
       )}
 
       {/* ============================================================ */}
-      {/* TAB 6: CUADRO DE ACTIVIDADES (35%) */}
+      {/* TAB 6: CUADROS 35% */}
       {/* ============================================================ */}
       {activeTab === 'cuadros' && (
         <div className="space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-500">Seleccionar Cuadro:</span>
+              <select
+                value={selectedCuadro?.id || ''}
+                onChange={(e) => {
+                  const c = cuadrosActividades.find((item) => item.id === e.target.value);
+                  if (c) setSelectedCuadro(c);
+                }}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white"
+              >
+                {cuadrosActividades.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.actividadTitulo} ({c.gradoSeccion})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleOpenCreateCuadro}
+                className="px-3.5 py-2 rounded-xl bg-[#124D37] text-white text-xs font-bold flex items-center gap-1.5 hover:bg-[#0E3D2B] transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nuevo Cuadro 35%</span>
+              </button>
+              {selectedCuadro && (
+                <button
+                  onClick={() => handleOpenEditCuadro(selectedCuadro)}
+                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>Editar</span>
+                </button>
+              )}
+            </div>
+          </div>
+
           {selectedCuadro && (
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
               <div className="border-b border-slate-200 pb-4">
@@ -884,42 +1271,30 @@ export const CurricularDocsManager: React.FC = () => {
                   {selectedCuadro.centroEducativo}
                 </span>
                 <h3 className="font-display font-extrabold text-xl text-slate-900">
-                  Cuadro de Actividades — {selectedCuadro.nivelEducativo} ({selectedCuadro.gradoSeccion})
+                  {selectedCuadro.actividadTitulo} — {selectedCuadro.gradoSeccion}
                 </h3>
-                <div className="flex flex-wrap gap-4 text-xs text-slate-600 mt-2">
-                  <span><strong>Docente:</strong> {selectedCuadro.docente}</span>
-                  <span><strong>Trimestre:</strong> {selectedCuadro.trimestrePeriodo}</span>
-                  <span><strong>Actividad:</strong> {selectedCuadro.actividadTitulo}</span>
-                  <span><strong>Fechas:</strong> {selectedCuadro.fechaRango}</span>
-                </div>
               </div>
 
-              {/* Subactivities Table */}
+              {/* Table */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
                   <thead className="bg-[#124D37] text-white">
                     <tr>
                       <th className="p-3 text-center w-12">N°</th>
-                      <th className="p-3">Nombre de la Subactividad</th>
-                      <th className="p-3">Descripción de la Tarea</th>
-                      <th className="p-3">Criterios de Evaluación</th>
+                      <th className="p-3">Nombre</th>
+                      <th className="p-3">Descripción</th>
                       <th className="p-3 text-center">Formato</th>
                       <th className="p-3 text-center">%</th>
-                      <th className="p-3 text-center">Fecha Entrega</th>
+                      <th className="p-3 text-center">Entrega</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {selectedCuadro.subactividades.map((sub) => (
-                      <tr key={sub.no} className="hover:bg-slate-50 transition-colors">
+                      <tr key={sub.no} className="hover:bg-slate-50">
                         <td className="p-3 text-center font-bold text-slate-500 bg-slate-50">{sub.no}</td>
                         <td className="p-3 font-bold text-slate-900">{sub.nombre}</td>
-                        <td className="p-3 text-slate-700 leading-relaxed">{sub.descripcion}</td>
-                        <td className="p-3 text-slate-600">{sub.criteriosEvaluacion}</td>
-                        <td className="p-3 text-center">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#0D71B9]">
-                            {sub.formato}
-                          </span>
-                        </td>
+                        <td className="p-3 text-slate-700">{sub.descripcion}</td>
+                        <td className="p-3 text-center font-bold text-[#0D71B9]">{sub.formato}</td>
                         <td className="p-3 text-center font-black text-[#124D37]">{sub.porcentaje}%</td>
                         <td className="p-3 text-center font-semibold text-slate-700">{sub.fechaEntrega}</td>
                       </tr>
@@ -927,18 +1302,67 @@ export const CurricularDocsManager: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+        </div>
+      )}
 
-              {/* Indications of General Academic Coordination */}
-              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
-                <span className="font-bold uppercase tracking-wider block text-amber-950 flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 text-amber-700" />
-                  <span>Indicaciones Dirigidas desde Coordinación Académica General:</span>
-                </span>
+      {/* ============================================================ */}
+      {/* TAB 7: TEMARIOS 30% */}
+      {/* ============================================================ */}
+      {activeTab === 'temarios' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-500">Seleccionar Temario:</span>
+              <select
+                value={selectedTemario?.id || ''}
+                onChange={(e) => {
+                  const t = temarios.find((item) => item.id === e.target.value);
+                  if (t) setSelectedTemario(t);
+                }}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white"
+              >
+                {temarios.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.tipoEvaluacion} ({t.asignatura})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleOpenCreateTemario}
+                className="px-3.5 py-2 rounded-xl bg-[#124D37] text-white text-xs font-bold flex items-center gap-1.5 hover:bg-[#0E3D2B] transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nuevo Temario</span>
+              </button>
+              {selectedTemario && (
+                <button
+                  onClick={() => handleOpenEditTemario(selectedTemario)}
+                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>Editar</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {selectedTemario && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+              <h3 className="font-display font-extrabold text-xl text-slate-900">
+                {selectedTemario.tipoEvaluacion} — {selectedTemario.asignatura}
+              </h3>
+              <p className="text-xs text-slate-600">Docente: <strong>{selectedTemario.docente}</strong> • Fecha: <strong>{selectedTemario.fechaAplicacion}</strong></p>
+              <div className="p-4 bg-slate-50 rounded-xl space-y-2 text-xs">
+                <span className="font-bold text-slate-900 block">Temas e Indicadores a Evaluar:</span>
                 <ul className="list-disc list-inside space-y-1 text-slate-700">
-                  <li>{selectedCuadro.indicacionesCoordinacion.politicaRetraso}</li>
-                  <li>{selectedCuadro.indicacionesCoordinacion.limiteDias}</li>
-                  <li>{selectedCuadro.indicacionesCoordinacion.periodoExtraordinario}</li>
-                  <li>{selectedCuadro.indicacionesCoordinacion.manualConvivencia}</li>
+                  {selectedTemario.temasYPaginas.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -947,300 +1371,310 @@ export const CurricularDocsManager: React.FC = () => {
       )}
 
       {/* ============================================================ */}
-      {/* TAB 7: TEMARIOS DE EVALUACIÓN (30%) */}
-      {/* ============================================================ */}
-      {activeTab === 'temarios' && (
-        <div className="space-y-6 animate-fade-in">
-          {selectedTemario && (
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
-              <div className="border-b border-slate-200 pb-4">
-                <span className="text-xs font-extrabold text-[#124D37] uppercase tracking-wider block">
-                  Colegio Salesiano San José
-                </span>
-                <h3 className="font-display font-extrabold text-xl text-slate-900">
-                  Temario de Contenidos a Evaluar — Prueba Ordinaria ({selectedTemario.porcentaje})
-                </h3>
-                <div className="flex flex-wrap gap-4 text-xs text-slate-600 mt-2">
-                  <span><strong>Docente:</strong> {selectedTemario.docente}</span>
-                  <span><strong>Asignatura:</strong> {selectedTemario.asignatura}</span>
-                  <span><strong>Periodo:</strong> {selectedTemario.periodoTrimestre}</span>
-                  <span><strong>Comprende:</strong> {selectedTemario.periodoComprendido}</span>
-                </div>
-              </div>
-
-              {/* Contents list */}
-              <div>
-                <h4 className="font-display font-bold text-slate-900 text-sm mb-3">
-                  Contenidos a Evaluar en la Prueba de Periodo
-                </h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
-                    <thead className="bg-[#124D37] text-white">
-                      <tr>
-                        <th className="p-3 w-12 text-center">N°</th>
-                        <th className="p-3">Contenido a Evaluar</th>
-                        <th className="p-3">N° de Página o Especificación</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {selectedTemario.contenidosAEvaluar.map((c, i) => (
-                        <tr key={i} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-3 text-center font-bold text-slate-500 bg-slate-50">{i + 1}</td>
-                          <td className="p-3 font-semibold text-slate-800">{c.contenido}</td>
-                          <td className="p-3 text-slate-600 font-medium">{c.paginaEspecificacion}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* General Indications */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                <span className="font-bold text-slate-900 block mb-1">Indicaciones Generales para el Estudiante:</span>
-                <p className="text-slate-600">{selectedTemario.indicacionesGenerales}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* TAB 8: RÚBRICA COMPLETA DE 29 ÍTEMS BTV DISEÑO GRÁFICO */}
+      {/* TAB 8: RÚBRICA DE 29 ÍTEMS MINED */}
       {/* ============================================================ */}
       {activeTab === 'rubrica_29' && (
         <div className="space-y-6 animate-fade-in">
-          {/* Header & live score calculation card */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-7 space-y-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-900 uppercase tracking-wide inline-block">
-                Evaluación Oficial de Especialidad MINED
+          {/* Summary Card */}
+          <div className="bg-gradient-to-r from-[#124D37] to-[#1E6B4E] rounded-3xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-widest text-[#E6C35C]">
+                Matriz Evaluativa Oficial MINEDUCYT
               </span>
-              <h2 className="font-display font-extrabold text-xl md:text-2xl text-slate-900">
-                Rúbrica Normativa de 29 Ítems Técnicos y Humanos
+              <h2 className="font-display font-extrabold text-2xl">
+                Rúbrica Normativa de 29 Ítems por Competencias (BTV Diseño Gráfico)
               </h2>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Bachillerato Técnico Vocacional en Diseño Gráfico. Evaluación por competencias en escala 1 al 5 en los 4 Ejes de Desarrollo Vocacional.
+              <p className="text-xs text-emerald-100 max-w-2xl">
+                Evaluación criterial y holística en escala 1 al 5 en los 4 Ejes de Desarrollo Vocacional.
               </p>
-
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <div className="text-xs">
-                  <span className="text-slate-500 font-semibold block">Estudiante a Calificar:</span>
-                  <input
-                    type="text"
-                    value={selectedStudentName}
-                    onChange={(e) => setSelectedStudentName(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50"
-                  />
-                </div>
-                <div className="text-xs">
-                  <span className="text-slate-500 font-semibold block">Actividad/Entrega:</span>
-                  <input
-                    type="text"
-                    value={selectedActivityCode}
-                    onChange={(e) => setSelectedActivityCode(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50"
-                  />
-                </div>
-              </div>
             </div>
 
-            {/* Live Score Summary */}
-            <div className="lg:col-span-5 bg-gradient-to-br from-slate-900 to-slate-800 p-5 rounded-2xl text-white flex flex-col justify-between shadow-md">
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Nota Global Ponderada
-                  </span>
-                  <span
-                    className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full ${
-                      calculatedRubric.approved ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
-                    }`}
-                  >
-                    {calculatedRubric.approved ? 'APROBADO' : 'REQUIERE REFUERZO'}
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-3 mt-1">
-                  <span className="font-display font-black text-4xl text-amber-400">
-                    {calculatedRubric.weightedGrade.toFixed(1)}
-                  </span>
-                  <span className="text-xs text-slate-400">/ 10.0 pts</span>
-                  <span className="text-xs font-bold text-emerald-400 ml-auto">
-                    Nivel {calculatedRubric.finalMinedLevel} MINED
-                  </span>
-                </div>
-              </div>
-
-              {/* 4 axes breakdown */}
-              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-700/60 text-xs">
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Técnico (35%):</span>
-                  <span className="font-extrabold text-blue-300">{calculatedRubric.scoreTecnico.toFixed(1)} pts</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Emprendedor (25%):</span>
-                  <span className="font-extrabold text-amber-300">{calculatedRubric.scoreEmprendedor.toFixed(1)} pts</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Humano (20%):</span>
-                  <span className="font-extrabold text-emerald-300">{calculatedRubric.scoreHumano.toFixed(1)} pts</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Académico (20%):</span>
-                  <span className="font-extrabold text-purple-300">{calculatedRubric.scoreAcademico.toFixed(1)} pts</span>
-                </div>
+            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 text-center min-w-[200px]">
+              <div className="text-xs text-emerald-200 uppercase tracking-wider font-semibold">Nota Ponderada</div>
+              <div className="text-4xl font-black font-display mt-1">{calculatedRubric.weightedGrade}</div>
+              <div className="text-xs font-bold mt-1 text-[#E6C35C]">
+                {MINED_LEVELS[calculatedRubric.finalMinedLevel]?.label || 'Aprobado'}
               </div>
             </div>
           </div>
 
-          {/* Filter axis pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <button
-              onClick={() => setSelectedAxisFilter('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                selectedAxisFilter === 'all'
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              Todos los 29 Ítems
-            </button>
-            <button
-              onClick={() => setSelectedAxisFilter('tecnico')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                selectedAxisFilter === 'tecnico'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-              }`}
-            >
-              Eje Técnico (9 Ítems - 35%)
-            </button>
-            <button
-              onClick={() => setSelectedAxisFilter('emprendedor')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                selectedAxisFilter === 'emprendedor'
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
-              }`}
-            >
-              Eje Emprendedor (7 Ítems - 25%)
-            </button>
-            <button
-              onClick={() => setSelectedAxisFilter('humano')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                selectedAxisFilter === 'humano'
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-              }`}
-            >
-              Eje Humano-Social (7 Ítems - 20%)
-            </button>
-            <button
-              onClick={() => setSelectedAxisFilter('academico')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                selectedAxisFilter === 'academico'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-purple-50 text-purple-800 hover:bg-purple-100'
-              }`}
-            >
-              Eje Académico Aplicado (6 Ítems - 20%)
-            </button>
-          </div>
-
-          {/* 29 Items Cards */}
+          {/* Criteria List */}
           <div className="space-y-4">
-            {filteredCriteria.map((item, index) => {
-              const currentLevel = rubricScores[item.id] || 4;
+            {filteredCriteria.map((item) => {
+              const currentScore = rubricScores[item.id] || 4;
               return (
-                <div
-                  key={item.id}
-                  className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3"
-                >
+                <div key={item.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-8 h-8 rounded-xl bg-slate-900 text-white font-display font-bold text-xs flex items-center justify-center">
+                    <div className="flex items-center gap-2.5">
+                      <span className="px-2 py-0.5 rounded text-xs font-black bg-slate-100 text-slate-800 font-mono">
                         {item.code}
                       </span>
-                      <div>
-                        <h4 className="font-display font-bold text-slate-900 text-sm">{item.name}</h4>
-                        <span className="text-[11px] font-semibold text-slate-400">
-                          {item.axisLabel} ({item.weightPercentage}%)
-                        </span>
-                      </div>
+                      <h4 className="font-display font-bold text-sm text-slate-900">{item.name}</h4>
                     </div>
-
-                    <div className="flex items-center gap-2 self-end sm:self-center">
-                      <span className="text-[11px] font-bold text-slate-500">Nivel Asignado:</span>
-                      <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-[#124D37] text-white">
-                        Nivel {currentLevel}
-                      </span>
-                    </div>
+                    <span className="text-xs font-bold text-[#124D37]">Ponderación: {item.weightPercentage}%</span>
                   </div>
 
-                  <p className="text-xs text-slate-600 leading-relaxed">{item.description}</p>
+                  <p className="text-xs text-slate-600">{item.description}</p>
 
-                  {/* Level 1 to 5 selector pills */}
                   <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-2">
-                    {([1, 2, 3, 4, 5] as MinedLevel[]).map((lvl) => {
-                      const isSelected = currentLevel === lvl;
-                      let descriptor = '';
-                      if (lvl === 1) descriptor = item.descriptorNivel1;
-                      if (lvl === 2) descriptor = item.descriptorNivel2;
-                      if (lvl === 3) descriptor = item.descriptorNivel3;
-                      if (lvl === 4) descriptor = item.descriptorNivel4;
-                      if (lvl === 5) descriptor = item.descriptorNivel5;
-
-                      return (
-                        <button
-                          key={lvl}
-                          type="button"
-                          onClick={() => handleScoreChange(item.id, lvl)}
-                          className={`p-2.5 rounded-xl text-left text-xs transition-all flex flex-col justify-between ${
-                            isSelected
-                              ? 'bg-[#124D37] text-white ring-2 ring-[#124D37] shadow-sm font-semibold'
-                              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/70'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-[11px]">Nivel {lvl}</span>
-                            <span className={`text-[10px] ${isSelected ? 'text-emerald-200' : 'text-slate-400'}`}>
-                              {lvl === 1 ? '4.0' : lvl === 2 ? '5.5' : lvl === 3 ? '6.5' : lvl === 4 ? '8.5' : '10.0'} pts
-                            </span>
-                          </div>
-                          <span className={`text-[10px] leading-tight line-clamp-3 ${isSelected ? 'text-emerald-100' : 'text-slate-500'}`}>
-                            {descriptor}
-                          </span>
-                        </button>
-                      );
-                    })}
+                    {[1, 2, 3, 4, 5].map((lvl) => (
+                      <button
+                        key={lvl}
+                        onClick={() => handleScoreChange(item.id, lvl as MinedLevel)}
+                        className={`p-3 rounded-xl border text-left text-xs transition-all ${
+                          currentScore === lvl
+                            ? 'bg-[#124D37] text-white border-[#124D37] shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="font-bold flex items-center justify-between">
+                          <span>Nivel {lvl}</span>
+                          {currentScore === lvl && <CheckCircle2 className="w-3.5 h-3.5 text-[#E6C35C]" />}
+                        </div>
+                        <p className={`text-[10px] mt-1 line-clamp-3 leading-tight ${currentScore === lvl ? 'text-emerald-100' : 'text-slate-500'}`}>
+                          {lvl === 1 && item.descriptorNivel1}
+                          {lvl === 2 && item.descriptorNivel2}
+                          {lvl === 3 && item.descriptorNivel3}
+                          {lvl === 4 && item.descriptorNivel4}
+                          {lvl === 5 && item.descriptorNivel5}
+                        </p>
+                      </button>
+                    ))}
                   </div>
                 </div>
               );
             })}
           </div>
+        </div>
+      )}
 
-          {/* Feedback & Save */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 space-y-3 shadow-xs">
-            <h4 className="font-display font-bold text-slate-900 text-sm">
-              Retroalimentación Formativa Cualitativa del Docente
-            </h4>
-            <textarea
-              rows={3}
-              value={rubricFeedback}
-              onChange={(e) => setRubricFeedback(e.target.value)}
-              className="w-full p-3 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#124D37]"
-              placeholder="Escribe observaciones formativas basadas en los 29 ítems..."
-            />
-            <div className="flex justify-end">
+      {/* ============================================================ */}
+      {/* TAB 9: VISTA DE IMPRESIÓN OFICIAL CSSJ */}
+      {/* ============================================================ */}
+      {activeTab === 'impresion' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200">
+            <div>
+              <h3 className="font-display font-bold text-sm text-slate-900">Vista de Documento Formal con Membrete</h3>
+              <p className="text-xs text-slate-500">Lista para imprimir o exportar a PDF para archivo pedagógico.</p>
+            </div>
+            <button
+              onClick={handlePrintDocument}
+              className="px-4 py-2 rounded-xl bg-[#124D37] text-white text-xs font-bold flex items-center gap-2 hover:bg-[#0E3D2B]"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Imprimir / Guardar PDF</span>
+            </button>
+          </div>
+
+          <div className="bg-white p-10 rounded-2xl border border-slate-300 shadow-sm space-y-6 max-w-4xl mx-auto print:border-none print:shadow-none">
+            {/* Header CSSJ */}
+            <div className="text-center border-b-2 border-[#124D37] pb-4 space-y-1">
+              <h2 className="font-display font-black text-xl text-[#124D37] uppercase tracking-wider">
+                Colegio Salesiano San José
+              </h2>
+              <p className="text-xs font-bold text-slate-700">Santa Ana, El Salvador • Coordinación Pedagógica 2026</p>
+              <p className="text-xs text-slate-500">Bachillerato Técnico Vocacional en Diseño Gráfico</p>
+            </div>
+
+            {selectedPlan && (
+              <div className="space-y-4">
+                <div className="text-center font-bold text-sm text-slate-900 bg-slate-100 py-1.5 rounded">
+                  PLANIFICACIÓN DIDÁCTICA DE UNIDAD
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs border border-slate-200 p-3 rounded">
+                  <div><strong>Docente:</strong> {selectedPlan.docente}</div>
+                  <div><strong>Asignatura:</strong> {selectedPlan.asignatura}</div>
+                  <div><strong>Grado y Sección:</strong> {selectedPlan.grado} "{selectedPlan.seccion}"</div>
+                  <div><strong>Tiempo:</strong> {selectedPlan.tiempoHoras} horas clase</div>
+                </div>
+
+                <div className="text-xs space-y-2">
+                  <strong>Competencia de la Unidad:</strong>
+                  <p className="text-slate-700 border p-2 rounded bg-slate-50">{selectedPlan.competenciasUnidad}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Firmas */}
+            <div className="grid grid-cols-3 gap-6 pt-16 text-center text-xs">
+              <div className="border-t border-slate-400 pt-2">
+                <strong>F. Docente de Especialidad</strong>
+              </div>
+              <div className="border-t border-slate-400 pt-2">
+                <strong>F. Coordinación Pedagógica</strong>
+              </div>
+              <div className="border-t border-slate-400 pt-2">
+                <strong>F. Dirección General</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL: CREAR / EDITAR PLAN DIDÁCTICO */}
+      {/* ============================================================ */}
+      {activeModal === 'plan_didactico' && formPlan && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-scale-in">
+            <div className="p-5 bg-gradient-to-r from-[#124D37] to-[#1E6B4E] text-white flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="font-display font-extrabold text-lg">
+                  {isEditingExisting ? 'Editar Plan Didáctico' : 'Nuevo Plan Didáctico 2026 (Saberes MINED)'}
+                </h3>
+                <p className="text-xs text-emerald-100">Colegio Salesiano San José</p>
+              </div>
+              <button onClick={() => setActiveModal('none')} className="p-1 rounded-lg hover:bg-white/20 text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 overflow-y-auto flex-1 text-xs">
+              {/* Autocomplete Selectors: Technical BTV and Academic Subjects */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* 1. Módulos Técnicos BTV (Docente Técnico) */}
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-1.5">
+                  <span className="font-bold text-[#124D37] flex items-center gap-1.5 text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Docente Técnico: Módulos BTV (26 Módulos):</span>
+                  </span>
+                  <select
+                    onChange={(e) => handleSelectBTVModuleForPlan(e.target.value)}
+                    className="w-full p-2 rounded-xl border border-emerald-300 text-xs font-bold text-slate-800 bg-white"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>-- Selecciona Módulo Técnico BTV --</option>
+                    {BTV_GRAPHIC_DESIGN_COURSES.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.code} — {course.name} ({course.hours}h • {course.technicalYear}° Año)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 2. Materias Académicas por Grado (Docente General) */}
+                <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-1.5">
+                  <span className="font-bold text-[#0D71B9] flex items-center gap-1.5 text-xs">
+                    <BookOpen className="w-3.5 h-3.5 text-[#0D71B9]" />
+                    <span>Docente Académico: Materias por Grado:</span>
+                  </span>
+                  <select
+                    onChange={(e) => handleSelectAcademicSubjectForPlan(e.target.value)}
+                    className="w-full p-2 rounded-xl border border-blue-300 text-xs font-bold text-slate-800 bg-white"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>-- Selecciona Materia y Grado Asignado --</option>
+                    {CSSJ_ACADEMIC_SUBJECTS_CATALOG.map((subj) => (
+                      <option key={subj.id} value={subj.id}>
+                        {subj.name} • {subj.grade} ({subj.weeklyHours}h/sem)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Nombre de la Asignatura / Módulo:</label>
+                  <input
+                    type="text"
+                    value={formPlan.asignatura}
+                    onChange={(e) => setFormPlan({ ...formPlan, asignatura: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Docente Responsable:</label>
+                  <input
+                    type="text"
+                    value={formPlan.docente}
+                    onChange={(e) => setFormPlan({ ...formPlan, docente: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Grado y Sección:</label>
+                  <input
+                    type="text"
+                    value={`${formPlan.grado} ${formPlan.seccion}`}
+                    onChange={(e) => setFormPlan({ ...formPlan, grado: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Horas Clase Totales:</label>
+                  <input
+                    type="number"
+                    value={formPlan.tiempoHoras}
+                    onChange={(e) => setFormPlan({ ...formPlan, tiempoHoras: Number(e.target.value) })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Competencia de la Unidad:</label>
+                <textarea
+                  rows={2}
+                  value={formPlan.competenciasUnidad}
+                  onChange={(e) => setFormPlan({ ...formPlan, competenciasUnidad: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 font-medium"
+                />
+              </div>
+
+              {/* 3 Saberes Inputs */}
+              <div className="space-y-3">
+                <div>
+                  <label className="font-bold text-[#0D71B9] block mb-1">
+                    Contenidos Conceptuales (Saber Conocer — Separados por comas o líneas):
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formPlan.contenidosConceptuales.join('\n')}
+                    onChange={(e) => setFormPlan({ ...formPlan, contenidosConceptuales: e.target.value.split('\n').filter(Boolean) })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-[#124D37] block mb-1">
+                    Contenidos Procedimentales (Saber Hacer — Separados por comas o líneas):
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formPlan.contenidosProcedimentales.join('\n')}
+                    onChange={(e) => setFormPlan({ ...formPlan, contenidosProcedimentales: e.target.value.split('\n').filter(Boolean) })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-[#D97706] block mb-1">
+                    Contenidos Actitudinales (Saber Ser — Separados por comas o líneas):
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formPlan.contenidosActitudinales.join('\n')}
+                    onChange={(e) => setFormPlan({ ...formPlan, contenidosActitudinales: e.target.value.split('\n').filter(Boolean) })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
               <button
-                onClick={() => {
-                  setSavedSuccessMsg(`¡Evaluación de 29 ítems guardada con éxito para ${selectedStudentName}! Nota: ${calculatedRubric.weightedGrade.toFixed(1)} / 10.0 (Nivel ${calculatedRubric.finalMinedLevel} MINED).`);
-                  setTimeout(() => setSavedSuccessMsg(null), 4000);
-                }}
-                className="px-5 py-2.5 rounded-xl bg-[#124D37] text-white text-xs font-bold flex items-center gap-2 hover:bg-[#0E3D2B] transition-colors shadow-sm"
+                onClick={() => setActiveModal('none')}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200"
               >
-                <Award className="w-4 h-4" />
-                <span>Guardar y Asignar Calificación Oficial de 29 Ítems</span>
+                Cancelar
+              </button>
+              <button
+                onClick={handleSavePlan}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-[#124D37] text-white hover:bg-[#0E3D2B] flex items-center gap-1.5 shadow-xs"
+              >
+                <Save className="w-4 h-4" />
+                <span>Guardar Plan Didáctico</span>
               </button>
             </div>
           </div>
@@ -1248,106 +1682,394 @@ export const CurricularDocsManager: React.FC = () => {
       )}
 
       {/* ============================================================ */}
-      {/* TAB 9: VISTA OFICIAL DE IMPRESIÓN CON MEMBRETE CSSJ */}
+      {/* MODAL: CREAR / EDITAR GUION DE CLASE */}
       {/* ============================================================ */}
-      {activeTab === 'impresion' && (
-        <div className="space-y-6 animate-fade-in bg-white p-8 rounded-2xl border border-slate-300 shadow-md print:p-0 print:border-none print:shadow-none">
-          {/* Action bar (hidden on print) */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200 print:hidden">
-            <span className="text-xs font-bold text-slate-600">
-              Vista previa para imprimir documentos oficiales del Colegio Salesiano San José
-            </span>
-            <button
-              onClick={handlePrintDocument}
-              className="px-4 py-2 rounded-xl bg-[#124D37] text-white text-xs font-bold flex items-center gap-2 hover:bg-[#0E3D2B] shadow-sm"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir / Guardar en PDF</span>
-            </button>
+      {activeModal === 'guion' && formGuion && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-scale-in">
+            <div className="p-5 bg-gradient-to-r from-[#0D71B9] to-[#1E4D8C] text-white flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="font-display font-extrabold text-lg">
+                  {isEditingExisting ? 'Editar Guion de Clase' : 'Nuevo Guion de Clase 2026'}
+                </h3>
+                <p className="text-xs text-blue-100">Secuencia Didáctica: Inicio, Desarrollo y Cierre</p>
+              </div>
+              <button onClick={() => setActiveModal('none')} className="p-1 rounded-lg hover:bg-white/20 text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+              {/* Quick Preset Selector for Guión de Clase */}
+              <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-1.5">
+                <span className="font-bold text-[#0D71B9] flex items-center gap-1.5 text-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-[#0D71B9]" />
+                  <span>Vincular con Asignatura / Módulo y Grado:</span>
+                </span>
+                <select
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.startsWith('btv:')) {
+                      const course = BTV_GRAPHIC_DESIGN_COURSES.find(c => c.id === val.replace('btv:', ''));
+                      if (course && formGuion) {
+                        setFormGuion({
+                          ...formGuion,
+                          unidad: `Módulo: ${course.code} ${course.name}`,
+                          gradoSeccion: `${course.technicalYear}° Año Técnico "A"`,
+                          contenido: `Sesión Práctica de Taller: ${course.name}`,
+                          docente: course.teacherName || formGuion.docente,
+                        });
+                      }
+                    } else if (val.startsWith('acad:')) {
+                      const subj = CSSJ_ACADEMIC_SUBJECTS_CATALOG.find(s => s.id === val.replace('acad:', ''));
+                      if (subj && formGuion) {
+                        setFormGuion({
+                          ...formGuion,
+                          unidad: `Asignatura: ${subj.name}`,
+                          gradoSeccion: subj.grade,
+                          contenido: `Clase Magistral y Actividad de Aprendizaje: ${subj.name}`,
+                        });
+                      }
+                    }
+                  }}
+                  className="w-full p-2 rounded-xl border border-blue-300 text-xs font-bold text-slate-800 bg-white"
+                  defaultValue=""
+                >
+                  <option value="" disabled>-- Selecciona la materia o módulo para este guion --</option>
+                  <optgroup label="📚 Materias Académicas por Grado">
+                    {CSSJ_ACADEMIC_SUBJECTS_CATALOG.map((subj) => (
+                      <option key={`guion-acad:${subj.id}`} value={`acad:${subj.id}`}>
+                        {subj.name} • {subj.grade}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🎨 Módulos Técnicos BTV">
+                    {BTV_GRAPHIC_DESIGN_COURSES.map((course) => (
+                      <option key={`guion-btv:${course.id}`} value={`btv:${course.id}`}>
+                        {course.code} — {course.name} ({course.technicalYear}° Año)
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Fecha:</label>
+                  <input
+                    type="date"
+                    value={formGuion.fecha}
+                    onChange={(e) => setFormGuion({ ...formGuion, fecha: e.target.value })}
+                    className="w-full p-2 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Docente:</label>
+                  <input
+                    type="text"
+                    value={formGuion.docente}
+                    onChange={(e) => setFormGuion({ ...formGuion, docente: e.target.value })}
+                    className="w-full p-2 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Tiempo (minutos):</label>
+                  <input
+                    type="number"
+                    value={formGuion.tiempoMinutos}
+                    onChange={(e) => setFormGuion({ ...formGuion, tiempoMinutos: Number(e.target.value) })}
+                    className="w-full p-2 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Tema / Contenido de la Sesión:</label>
+                <input
+                  type="text"
+                  value={formGuion.contenido}
+                  onChange={(e) => setFormGuion({ ...formGuion, contenido: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold"
+                />
+              </div>
+
+              {/* Secuencia Didáctica */}
+              <div className="space-y-3">
+                <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 space-y-1.5">
+                  <label className="font-bold text-[#0D71B9] block">1. Inicio (Evaluación Diagnóstica):</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Situación de aprendizaje y preguntas de saberes previos..."
+                    value={formGuion.inicio.situacion}
+                    onChange={(e) => setFormGuion({ ...formGuion, inicio: { ...formGuion.inicio, situacion: e.target.value } })}
+                    className="w-full p-2 rounded-lg border border-slate-200 font-medium text-xs bg-white"
+                  />
+                </div>
+
+                <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-1.5">
+                  <label className="font-bold text-[#124D37] block">2. Desarrollo (Evaluación Formativa):</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Demostración técnica en taller y práctica guiada de los estudiantes..."
+                    value={formGuion.desarrollo.situacion}
+                    onChange={(e) => setFormGuion({ ...formGuion, desarrollo: { ...formGuion.desarrollo, situacion: e.target.value } })}
+                    className="w-full p-2 rounded-lg border border-slate-200 font-medium text-xs bg-white"
+                  />
+                </div>
+
+                <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100 space-y-1.5">
+                  <label className="font-bold text-amber-800 block">3. Cierre (Evaluación Sumativa / % Ponderación):</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Verificación de rúbrica, análisis de desempeño y entrega en aula virtual..."
+                    value={formGuion.cierre.situacion}
+                    onChange={(e) => setFormGuion({ ...formGuion, cierre: { ...formGuion.cierre, situacion: e.target.value } })}
+                    className="w-full p-2 rounded-lg border border-slate-200 font-medium text-xs bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Adaptaciones Curriculares:</label>
+                  <input
+                    type="text"
+                    value={formGuion.adaptacionesCurriculares}
+                    onChange={(e) => setFormGuion({ ...formGuion, adaptacionesCurriculares: e.target.value })}
+                    className="w-full p-2 rounded-xl border border-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Tarea para Casa:</label>
+                  <input
+                    type="text"
+                    value={formGuion.tarea}
+                    onChange={(e) => setFormGuion({ ...formGuion, tarea: e.target.value })}
+                    className="w-full p-2 rounded-xl border border-slate-200"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+              <button
+                onClick={() => setActiveModal('none')}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveGuion}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-[#0D71B9] text-white hover:bg-[#0a5a94] flex items-center gap-1.5 shadow-xs"
+              >
+                <Save className="w-4 h-4" />
+                <span>Guardar Guion de Clase</span>
+              </button>
+            </div>
           </div>
+        </div>
+      )}
 
-          {/* Institutional Letterhead */}
-          <div className="text-center space-y-1 border-b-2 border-[#124D37] pb-4">
-            <div className="text-xs font-extrabold text-[#124D37] uppercase tracking-widest">
-              COLEGIO SALESIANO SAN JOSÉ • SANTA ANA, EL SALVADOR
-            </div>
-            <h2 className="font-display font-black text-xl md:text-2xl text-slate-900">
-              DOCUMENTACIÓN CURRICULAR Y EVALUATIVA — 2026
-            </h2>
-            <p className="text-xs text-slate-600">
-              Bachillerato Técnico Vocacional en Diseño Gráfico & Educación Básica
-            </p>
-          </div>
-
-          {/* Printable Body Content */}
-          <div className="space-y-6 text-xs text-slate-800 pt-2">
-            <div className="grid grid-cols-2 gap-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <div><strong>Docente:</strong> Lic. Alexander Gómez</div>
-              <div><strong>Año Escolar:</strong> 2026 (40 Semanas / 200 Días)</div>
-              <div><strong>Especialidad:</strong> Diseño Gráfico (MINED)</div>
-              <div><strong>Sede:</strong> Final 17 Av. Sur, Cantón Loma Alta, Santa Ana</div>
+      {/* ============================================================ */}
+      {/* MODAL: CREAR / EDITAR JORNALIZACIÓN ANUAL */}
+      {/* ============================================================ */}
+      {activeModal === 'jornalizacion' && formJorn && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-scale-in">
+            <div className="p-5 bg-gradient-to-r from-[#124D37] to-[#1E6B4E] text-white flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="font-display font-extrabold text-lg">
+                  {isEditingExisting ? 'Editar Jornalización' : 'Nueva Jornalización Anual 2026'}
+                </h3>
+                <p className="text-xs text-emerald-100">Distribución de 40 Semanas y 200 Días Lectivos</p>
+              </div>
+              <button onClick={() => setActiveModal('none')} className="p-1 rounded-lg hover:bg-white/20 text-white">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Document summary table */}
-            <div className="space-y-2">
-              <h3 className="font-bold text-slate-900 uppercase">Estructura Curricular Aprobada:</h3>
-              <table className="w-full text-left border border-slate-300">
-                <thead className="bg-slate-100">
-                  <tr>
-                    <th className="p-2 border border-slate-300">Documento Oficial</th>
-                    <th className="p-2 border border-slate-300">Finalidad Institucional</th>
-                    <th className="p-2 border border-slate-300 text-center">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="p-2 border border-slate-300 font-semibold">1. Calendario Académico 2026</td>
-                    <td className="p-2 border border-slate-300">Distribución de los 4 periodos de Media y 3 trimestres de Básica.</td>
-                    <td className="p-2 border border-slate-300 text-center font-bold text-emerald-700">Vigente</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2 border border-slate-300 font-semibold">2. Jornalización Anual (40 Semanas)</td>
-                    <td className="p-2 border border-slate-300">Cálculo de horas anuales (720h/1200h) y fechas de inicio/fin por unidad.</td>
-                    <td className="p-2 border border-slate-300 text-center font-bold text-emerald-700">Aprobada</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2 border border-slate-300 font-semibold">3. Planificación Didáctica</td>
-                    <td className="p-2 border border-slate-300">Desglose de Saber Conocer, Saber Hacer, Saber Ser e Indicadores de logro.</td>
-                    <td className="p-2 border border-slate-300 text-center font-bold text-emerald-700">Aprobada</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2 border border-slate-300 font-semibold">4. Guiones de Clase</td>
-                    <td className="p-2 border border-slate-300">Secuencia de Inicio (Diagnóstica), Desarrollo (Formativa) y Cierre (Sumativa).</td>
-                    <td className="p-2 border border-slate-300 text-center font-bold text-emerald-700">Aprobada</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2 border border-slate-300 font-semibold">5. Cuadro de Actividades 35%</td>
-                    <td className="p-2 border border-slate-300">Subactividades formativas y normativas de entrega del CSSJ.</td>
-                    <td className="p-2 border border-slate-300 text-center font-bold text-emerald-700">Aprobada</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2 border border-slate-300 font-semibold">6. Rúbrica Normativa de 29 Ítems</td>
-                    <td className="p-2 border border-slate-300">Evaluación por competencias en escala 1 al 5 en los 4 Ejes MINED.</td>
-                    <td className="p-2 border border-slate-300 text-center font-bold text-emerald-700">Certificada</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+              {/* Quick Preset Selector for Jornalización */}
+              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-1.5">
+                <span className="font-bold text-[#124D37] flex items-center gap-1.5 text-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Cargar plantilla oficial por Asignatura / Módulo y Grado:</span>
+                </span>
+                <select
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.startsWith('btv:')) {
+                      const course = BTV_GRAPHIC_DESIGN_COURSES.find(c => c.id === val.replace('btv:', ''));
+                      if (course && formJorn) {
+                        setFormJorn({
+                          ...formJorn,
+                          asignatura: `${course.code} ${course.name}`,
+                          gradoSeccion: `${course.technicalYear}° Año Técnico "A"`,
+                          horasAnuales: course.hours,
+                          horasSemanales: Math.round(course.hours / 40),
+                          docente: course.teacherName || formJorn.docente,
+                        });
+                      }
+                    } else if (val.startsWith('acad:')) {
+                      handleSelectSubjectForJorn(val.replace('acad:', ''));
+                    }
+                  }}
+                  className="w-full p-2 rounded-xl border border-emerald-300 text-xs font-bold text-slate-800 bg-white"
+                  defaultValue=""
+                >
+                  <option value="" disabled>-- Elige una materia o módulo predeterminado --</option>
+                  <optgroup label="📚 Materias Académicas por Grado (Colegio General)">
+                    {CSSJ_ACADEMIC_SUBJECTS_CATALOG.map((subj) => (
+                      <option key={`acad:${subj.id}`} value={`acad:${subj.id}`}>
+                        {subj.name} • {subj.grade} ({subj.annualHours}h / {subj.weeklyHours}h sem)
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🎨 Módulos Técnicos BTV (Docente de Especialidad)">
+                    {BTV_GRAPHIC_DESIGN_COURSES.map((course) => (
+                      <option key={`btv:${course.id}`} value={`btv:${course.id}`}>
+                        {course.code} — {course.name} ({course.hours}h • {course.technicalYear}° Año)
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Asignatura / Módulo:</label>
+                  <input
+                    type="text"
+                    value={formJorn.asignatura}
+                    onChange={(e) => setFormJorn({ ...formJorn, asignatura: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Docente Responsable:</label>
+                  <input
+                    type="text"
+                    value={formJorn.docente}
+                    onChange={(e) => setFormJorn({ ...formJorn, docente: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Grado y Sección:</label>
+                  <input
+                    type="text"
+                    value={formJorn.gradoSeccion}
+                    onChange={(e) => setFormJorn({ ...formJorn, gradoSeccion: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Horas Anuales Totales:</label>
+                  <input
+                    type="number"
+                    value={formJorn.horasAnuales}
+                    onChange={(e) => setFormJorn({ ...formJorn, horasAnuales: Number(e.target.value) })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold"
+                  />
+                </div>
+              </div>
+
+              {/* Units Table inside Modal */}
+              <div className="space-y-2 pt-2 border-t border-slate-200">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800">Unidades Didácticas:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextNo = formJorn.unidades.length + 1;
+                      setFormJorn({
+                        ...formJorn,
+                        unidades: [
+                          ...formJorn.unidades,
+                          {
+                            unitNumber: nextNo,
+                            title: `Nueva Unidad ${nextNo}`,
+                            totalObjectives: 4,
+                            classHours: 36,
+                            fechaInicio: '02/02/2026',
+                            fechaFin: '27/02/2026',
+                          },
+                        ],
+                      });
+                    }}
+                    className="px-2.5 py-1 bg-emerald-100 text-[#124D37] rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-200"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Agregar Unidad</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {formJorn.unidades.map((u, idx) => (
+                    <div key={idx} className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-12 gap-2 items-center">
+                      <span className="col-span-1 font-bold text-slate-500 text-center">{u.unitNumber}</span>
+                      <input
+                        type="text"
+                        value={u.title}
+                        onChange={(e) => {
+                          const copy = [...formJorn.unidades];
+                          copy[idx].title = e.target.value;
+                          setFormJorn({ ...formJorn, unidades: copy });
+                        }}
+                        className="col-span-6 p-1.5 rounded-lg border border-slate-200 text-xs font-medium"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Horas"
+                        value={u.classHours}
+                        onChange={(e) => {
+                          const copy = [...formJorn.unidades];
+                          copy[idx].classHours = Number(e.target.value);
+                          setFormJorn({ ...formJorn, unidades: copy });
+                        }}
+                        className="col-span-2 p-1.5 rounded-lg border border-slate-200 text-xs font-bold text-center"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Inicio"
+                        value={u.fechaInicio}
+                        onChange={(e) => {
+                          const copy = [...formJorn.unidades];
+                          copy[idx].fechaInicio = e.target.value;
+                          setFormJorn({ ...formJorn, unidades: copy });
+                        }}
+                        className="col-span-2 p-1.5 rounded-lg border border-slate-200 text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const copy = formJorn.unidades.filter((_, i) => i !== idx);
+                          setFormJorn({ ...formJorn, unidades: copy });
+                        }}
+                        className="col-span-1 text-red-500 hover:text-red-700 flex justify-center"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Signature fields */}
-            <div className="grid grid-cols-3 gap-8 pt-12 text-center text-xs">
-              <div className="border-t border-slate-400 pt-2">
-                <span className="font-bold block">Firma del Docente</span>
-                <span className="text-slate-500">Lic. Alexander Gómez</span>
-              </div>
-              <div className="border-t border-slate-400 pt-2">
-                <span className="font-bold block">Coordinación Pedagógica</span>
-                <span className="text-slate-500">Colegio Salesiano San José</span>
-              </div>
-              <div className="border-t border-slate-400 pt-2">
-                <span className="font-bold block">Sello Institucional</span>
-                <span className="text-slate-500">Dirección General</span>
-              </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+              <button
+                onClick={() => setActiveModal('none')}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveJorn}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-[#124D37] text-white hover:bg-[#0E3D2B] flex items-center gap-1.5 shadow-xs"
+              >
+                <Save className="w-4 h-4" />
+                <span>Guardar Jornalización</span>
+              </button>
             </div>
           </div>
         </div>
