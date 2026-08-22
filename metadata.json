@@ -1,0 +1,6 @@
+{
+  "name": "LMS Campus Salesiano San José",
+  "description": "LMS Especializado para el Bachillerato Técnico Vocacional en Diseño Gráfico con malla curricular oficial de 3 años, metodología de acción completa, rúbricas MINED escala 1-5 y generador de proyectos anuales.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
